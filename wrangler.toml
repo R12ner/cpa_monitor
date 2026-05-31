@@ -1,0 +1,15 @@
+name = "cpa-monitor"
+compatibility_date = "2026-05-03"
+pages_build_output_dir = "public"
+
+[vars]
+MONITOR_TARGET_URL = "https://chatgpt.com/backend-api/wham/usage"
+CHECK_TIMEOUT_MS = "30000"
+CHECK_CONCURRENCY = "8"
+SKIP_DISABLED = "true"
+
+# Set secrets with:
+# wrangler secret put CPA_INSTANCES_JSON
+#
+# CPA_INSTANCES_JSON example:
+# [{"id":"main","name":"Main CPA","baseUrl":"https://cpa.example.com","accessKey":"replace-me","enabled":true}]

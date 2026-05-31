@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CPA Monitor // Probe</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <section class="panel">
+        <div class="title-bar">
+          <div class="dots">
+            <span class="dot dot-r"></span>
+            <span class="dot dot-y"></span>
+            <span class="dot dot-g"></span>
+          </div>
+          <span class="title">NAV</span>
+        </div>
+        <div class="panel-body">
+          <div class="brand">
+            <div class="brand-icon">CPA</div>
+            <div class="brand-text">
+              <h1>CPA Monitor</h1>
+              <span>Cloudflare Probe</span>
+            </div>
+          </div>
+
+          <div class="nav-section">
+            <div class="nav-label">// Monitor</div>
+            <button class="nav-item active" type="button" data-action="refresh-list">
+              <span class="icon">◉</span>
+              Refresh list
+            </button>
+            <button class="nav-item" type="button" data-action="check-all">
+              <span class="icon">◎</span>
+              Check all
+              <span class="nav-badge" id="problemBadge">0</span>
+            </button>
+            <button class="nav-item" type="button" data-action="export-json">
+              <span class="icon">⌘</span>
+              Export JSON
+            </button>
+          </div>
+
+          <div class="nav-section">
+            <div class="nav-label">// Status</div>
+            <div class="status-grid compact">
+              <div class="status-box">
+                <div class="val" id="sideHealthy">0</div>
+                <div class="label">Healthy</div>
+              </div>
+              <div class="status-box">
+                <div class="val danger" id="sideProblems">0</div>
+                <div class="label">Problems</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="terminal-note" id="configNote">Waiting for config</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="title-bar">
+          <div class="dots">
+            <span class="dot dot-r"></span>
+            <span class="dot dot-y"></span>
+            <span class="dot dot-g"></span>
+          </div>
+          <span class="title">Worker</span>
+        </div>
+        <div class="panel-body">
+          <div class="kv-list">
+            <div><span>API</span><strong id="apiStatus">checking</strong></div>
+            <div><span>Timeout</span><strong id="timeoutMs">-</strong></div>
+            <div><span>Concurrency</span><strong id="concurrency">-</strong></div>
+            <div><span>Skip Disabled</span><strong id="skipDisabled">-</strong></div>
+          </div>
+        </div>
+      </section>
+    </aside>
+
+    <main class="main">
+      <section class="panel hero-panel">
+        <div class="title-bar">
+          <div class="dots">
+            <span class="dot dot-r"></span>
+            <span class="dot dot-y"></span>
+            <span class="dot dot-g"></span>
+          </div>
+          <span class="title">CPA PROBE</span>
+        </div>
+        <div class="panel-body hero-body">
+          <div>
+            <div class="eyebrow">root@cf-worker:~# monitor --target cpa</div>
+            <h2>CPA quota monitor</h2>
+            <p>Cached auth-file status, usage checks, and quota progress for CPA reverse proxy instances.</p>
+          </div>
+          <div class="action-row">
+            <button class="btn primary" type="button" id="refreshBtn">Refresh list</button>
+            <button class="btn" type="button" id="checkBtn">Check all</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="metric-grid" aria-label="Summary">
+        <div class="metric-card">
+          <span>Instances</span>
+          <strong id="metricInstances">0</strong>
+          <small id="metricInstanceHint">0 healthy</small>
+        </div>
+        <div class="metric-card">
+          <span>Auth files</span>
+          <strong id="metricFiles">0</strong>
+          <small>total files</small>
+        </div>
+        <div class="metric-card">
+          <span>OK</span>
+          <strong class="ok" id="metricOk">0</strong>
+          <small>2xx usage</small>
+        </div>
+        <div class="metric-card">
+          <span>401</span>
+          <strong class="danger" id="metricInvalid">0</strong>
+          <small>invalid token</small>
+        </div>
+        <div class="metric-card">
+          <span>Limited</span>
+          <strong class="warn" id="metricLimited">0</strong>
+          <small>403 / 429</small>
+        </div>
+        <div class="metric-card">
+          <span>Errors</span>
+          <strong class="danger" id="metricErrors">0</strong>
+          <small>network / upstream</small>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="title-bar">
+          <div class="dots">
+            <span class="dot dot-r"></span>
+            <span class="dot dot-y"></span>
+            <span class="dot dot-g"></span>
+          </div>
+          <span class="title">QUOTA</span>
+        </div>
+        <div class="panel-body">
+          <div class="quota-toolbar">
+            <div>
+              <strong>Codex quota</strong>
+              <span id="quotaCount">0</span>
+            </div>
+            <select id="quotaMode">
+              <option value="paged">Paged</option>
+              <option value="all">Show all</option>
+            </select>
+          </div>
+          <div class="quota-grid" id="quotaGrid">
+            <div class="empty quota-empty">No quota data yet. Click "Check all" first.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="title-bar">
+          <div class="dots">
+            <span class="dot dot-r"></span>
+            <span class="dot dot-y"></span>
+            <span class="dot dot-g"></span>
+          </div>
+          <span class="title">FILTERS</span>
+        </div>
+        <div class="panel-body filters">
+          <label>
+            Instance
+            <select id="instanceFilter"></select>
+          </label>
+          <label>
+            Status
+            <select id="statusFilter">
+              <option value="">All</option>
+              <option value="ok">OK</option>
+              <option value="invalid_401">401</option>
+              <option value="limited_or_forbidden">Limited</option>
+              <option value="upstream_error">Upstream error</option>
+              <option value="check_error">Check error</option>
+              <option value="skipped">Skipped</option>
+              <option value="unchecked">Unchecked</option>
+            </select>
+          </label>
+          <label>
+            disabled
+            <select id="disabledFilter">
+              <option value="">All</option>
+              <option value="false">false</option>
+              <option value="true">true</option>
+            </select>
+          </label>
+          <label class="search-label">
+            Search
+            <input id="searchInput" type="search" placeholder="file id / auth index / account id">
+          </label>
+          <label class="toggle-line">
+            <input id="onlyProblems" type="checkbox">
+            Problems only
+          </label>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="title-bar">
+          <div class="dots">
+            <span class="dot dot-r"></span>
+            <span class="dot dot-y"></span>
+            <span class="dot dot-g"></span>
+          </div>
+          <span class="title">AUTH FILES</span>
+        </div>
+        <div class="panel-body table-wrap">
+          <div class="table-toolbar">
+            <span id="tableCount">0 rows</span>
+            <span id="lastChecked">Not checked yet</span>
+          </div>
+          <div class="responsive-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Instance</th>
+                  <th>File</th>
+                  <th>provider</th>
+                  <th>auth_index</th>
+                  <th>disabled</th>
+                  <th>Account</th>
+                  <th>Status</th>
+                  <th>HTTP</th>
+                  <th>Latency</th>
+                  <th>Message</th>
+                </tr>
+              </thead>
+              <tbody id="fileTable">
+                <tr><td colspan="10" class="empty">Loading config</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="title-bar">
+          <div class="dots">
+            <span class="dot dot-r"></span>
+            <span class="dot dot-y"></span>
+            <span class="dot dot-g"></span>
+          </div>
+          <span class="title">LOGS</span>
+        </div>
+        <div class="panel-body">
+          <div class="cache-status" id="cacheStatus">No cached check result</div>
+          <div class="log-output" id="logOutput"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/app.js" type="module"></script>
+</body>
+</html>

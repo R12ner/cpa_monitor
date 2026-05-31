@@ -1,0 +1,14 @@
+{
+  "name": "cpa-monitor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler pages dev public",
+    "deploy": "wrangler pages deploy public",
+    "check": "node --check functions/api/[[path]].js && node --check public/app.js"
+  },
+  "devDependencies": {
+    "wrangler": "^4.18.0"
+  }
+}

@@ -1,0 +1,1437 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>omiku.de // Cyber Terminal</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-deep: #e9e1d4;
+  --bg-page: #f4eee3;
+  --bg-panel: rgba(255, 251, 245, 0.78);
+  --bg-card: rgba(255, 252, 247, 0.92);
+  --bg-inset: #efe6d9;
+  --cyan: #1677ff;
+  --cyan-dim: rgba(22, 119, 255, 0.26);
+  --cyan-faint: rgba(22, 119, 255, 0.12);
+  --magenta: #ff6482;
+  --green: #27b05f;
+  --amber: #ff9f3f;
+  --purple: #7a7cff;
+  --text: #1b2433;
+  --text-dim: #6a7688;
+  --text-muted: #9aa4b2;
+  --dot-red: #FF5F57;
+  --dot-yellow: #FEBC2E;
+  --dot-green: #28C840;
+  --radius: 14px;
+  --font: 'JetBrains Mono', monospace;
+}
+
+body {
+  background:
+    radial-gradient(circle at top left, rgba(84, 184, 255, 0.24), transparent 28%),
+    radial-gradient(circle at top right, rgba(122, 124, 255, 0.16), transparent 24%),
+    linear-gradient(180deg, #fbfdff 0%, var(--bg-deep) 100%);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  line-height: 1.7;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 20px;
+  max-width: 1380px;
+  margin: 0 auto;
+  padding: 24px;
+  min-height: 100vh;
+}
+
+/* ─── Panel Base ─── */
+.panel {
+  background: var(--bg-panel);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: var(--radius);
+  overflow: hidden;
+  position: relative;
+  animation: panelIn 0.5s ease-out both;
+  backdrop-filter: blur(24px);
+  box-shadow: 0 18px 40px rgba(116, 132, 153, 0.12);
+}
+
+.panel:hover {
+  border-color: rgba(22, 119, 255, 0.18);
+  box-shadow: 0 24px 44px rgba(116, 132, 153, 0.16);
+}
+
+@keyframes panelIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.title-bar {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(27, 36, 51, 0.06);
+  background: linear-gradient(180deg, rgba(255,255,255,0.8) 0%, rgba(247,250,253,0.65) 100%);
+  position: relative;
+}
+
+.dots { display: flex; gap: 8px; flex-shrink: 0; }
+
+.dot {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+.dot:hover { filter: brightness(1.05); transform: scale(1.15); }
+.dot-r { background: var(--dot-red); }
+.dot-y { background: var(--dot-yellow); }
+.dot-g { background: var(--dot-green); }
+
+.title-bar .title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.panel-body { padding: 20px; }
+
+/* ─── Sidebar ─── */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 0 16px;
+  border-bottom: 1px solid rgba(27, 36, 51, 0.06);
+  margin-bottom: 8px;
+}
+
+.brand-icon {
+  width: 48px; height: 48px;
+  background: linear-gradient(135deg, #ffffff 0%, #eaf3ff 100%);
+  border: 1px solid rgba(22, 119, 255, 0.14);
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  color: var(--cyan);
+  box-shadow: 0 10px 18px rgba(22, 119, 255, 0.12);
+}
+
+.brand-text h1 {
+  font-size: 14px; font-weight: 600;
+  color: var(--cyan); letter-spacing: 1px;
+}
+.brand-text span { font-size: 11px; color: var(--text-dim); }
+
+.nav-section { margin-top: 12px; }
+
+.nav-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 12px;
+  border: 1px solid transparent;
+  user-select: none;
+}
+
+.nav-item:hover {
+  background: rgba(22, 119, 255, 0.06);
+  color: var(--text);
+  border-color: rgba(22, 119, 255, 0.08);
+}
+
+.nav-item.active {
+  background: linear-gradient(135deg, rgba(255,255,255,0.92), rgba(233,242,255,0.95));
+  color: var(--cyan);
+  border-color: rgba(22, 119, 255, 0.16);
+  box-shadow: 0 10px 20px rgba(22, 119, 255, 0.08);
+}
+
+.nav-item .icon { font-size: 14px; width: 20px; text-align: center; }
+
+.nav-badge {
+  margin-left: auto;
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: var(--magenta);
+  color: white;
+  font-weight: 600;
+}
+
+/* ─── Status Grid ─── */
+.status-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.status-box {
+  background: var(--bg-inset);
+  border: 1px solid rgba(27, 36, 51, 0.05);
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+  transition: all 0.3s;
+}
+
+.status-box:hover {
+  border-color: rgba(22, 119, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+.status-box .val {
+  font-size: 20px; font-weight: 700; color: var(--cyan);
+}
+.status-box .label {
+  font-size: 10px; color: var(--text-dim);
+  text-transform: uppercase; letter-spacing: 1px; margin-top: 4px;
+}
+
+.progress-container { margin-top: 16px; }
+
+.progress-label {
+  display: flex; justify-content: space-between;
+  font-size: 11px; color: var(--text-dim);
+  margin-bottom: 6px;
+  text-transform: uppercase; letter-spacing: 1px;
+}
+
+.progress-track {
+  height: 6px;
+  background: rgba(27, 36, 51, 0.06);
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid rgba(22, 119, 255, 0.06);
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--cyan), var(--purple));
+  border-radius: 3px;
+  transition: width 1.5s ease-out;
+}
+
+@keyframes fillIn { from { width: 0 !important; } }
+
+/* ─── Main ─── */
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.header-section { text-align: left; }
+
+.section-title {
+  font-size: 22px; font-weight: 700;
+  color: var(--cyan);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+.section-title::before { content: '// '; color: var(--text-muted); }
+
+.section-subtitle {
+  color: var(--text-dim);
+  margin-top: 6px; font-size: 12px;
+}
+
+/* ─── Terminal / Search ─── */
+.terminal {
+  background: linear-gradient(180deg, #fbfdff 0%, #f2f7fd 100%);
+  border: 1px solid rgba(22, 119, 255, 0.08);
+  border-radius: 10px;
+  padding: 20px;
+  overflow-x: auto;
+}
+
+.terminal .prompt { color: var(--green); font-weight: 600; }
+.timestamp { color: var(--amber); }
+.ok { color: var(--green); }
+.warn { color: var(--amber); }
+.fail { color: var(--magenta); }
+
+.terminal .log-line {
+  margin: 6px 0;
+  opacity: 0;
+  animation: typeLine 0.3s ease-out forwards;
+}
+.terminal .log-line:nth-child(1) { animation-delay: 0.4s; }
+.terminal .log-line:nth-child(2) { animation-delay: 0.7s; }
+.terminal .log-line:nth-child(3) { animation-delay: 1.0s; }
+.terminal .log-line:nth-child(4) { animation-delay: 1.3s; }
+.terminal .log-line:nth-child(5) { animation-delay: 1.6s; }
+
+@keyframes typeLine {
+  from { opacity: 0; transform: translateX(-5px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.cursor-blink {
+  display: inline-block;
+  width: 8px; height: 15px;
+  background: var(--green);
+  vertical-align: text-bottom;
+  animation: blink 1s step-end infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+/* ─── Search Input ─── */
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-top: 12px;
+}
+
+.search-row .prompt {
+  color: var(--green);
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  caret-color: var(--green);
+  margin-left: 4px;
+}
+
+.search-input::placeholder { color: var(--text-muted); }
+
+.search-btn {
+  background: rgba(22, 119, 255, 0.1);
+  border: 1px solid rgba(22, 119, 255, 0.24);
+  color: var(--cyan);
+  font-family: var(--font);
+  font-size: 11px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  margin-left: 8px;
+}
+.search-btn:hover {
+  background: rgba(22, 119, 255, 0.18);
+  border-color: rgba(22, 119, 255, 0.4);
+}
+
+/* ─── Search Results ─── */
+.search-results {
+  margin-top: 16px;
+  display: none;
+}
+
+.search-results.show { display: block; }
+
+.result-item {
+  padding: 14px 16px;
+  border: 1px solid rgba(22, 119, 255, 0.08);
+  border-radius: 10px;
+  margin-bottom: 10px;
+  background: rgba(255, 252, 247, 0.6);
+  transition: all 0.25s;
+  cursor: pointer;
+}
+
+.result-item:hover {
+  border-color: rgba(22, 119, 255, 0.22);
+  background: rgba(255, 252, 247, 0.9);
+  transform: translateX(4px);
+}
+
+.result-title {
+  font-weight: 600;
+  color: var(--cyan);
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.result-url {
+  font-size: 11px;
+  color: var(--green);
+  margin-bottom: 6px;
+}
+
+.result-desc {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+
+.search-engine-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 12px;
+  text-align: right;
+  letter-spacing: 0.5px;
+}
+
+/* ─── Cards Grid ─── */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.data-card {
+  background: var(--bg-card);
+  border: 1px solid rgba(255, 255, 255, 0.88);
+  border-radius: 12px;
+  padding: 18px;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 14px 26px rgba(116, 132, 153, 0.08);
+  animation: panelIn 0.5s ease-out both;
+}
+
+.data-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 3px; height: 100%;
+  background: var(--cyan);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.data-card:hover {
+  border-color: rgba(22, 119, 255, 0.14);
+  box-shadow: 0 18px 30px rgba(116, 132, 153, 0.12);
+  transform: translateY(-2px);
+}
+.data-card:hover::before { opacity: 1; }
+
+.data-card .card-icon { font-size: 22px; margin-bottom: 10px; }
+.data-card .card-value { font-size: 28px; font-weight: 700; color: var(--text); }
+.data-card .card-label {
+  font-size: 11px; color: var(--text-dim);
+  text-transform: uppercase; letter-spacing: 1px; margin-top: 4px;
+}
+.data-card .card-change {
+  font-size: 11px; margin-top: 8px;
+  padding: 3px 8px; border-radius: 999px;
+  display: inline-block;
+}
+.change-up { color: var(--green); background: rgba(39, 176, 95, 0.1); }
+.change-down { color: var(--magenta); background: rgba(255, 100, 130, 0.12); }
+
+/* ─── Mini Chart (sparkline) ─── */
+.spark-wrap {
+  margin-top: 10px;
+  height: 32px;
+}
+
+.spark-wrap svg {
+  width: 100%;
+  height: 32px;
+}
+
+/* ─── Table ─── */
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+
+.data-table th {
+  text-align: left; padding: 10px 14px;
+  color: var(--cyan); text-transform: uppercase;
+  letter-spacing: 1.5px; font-size: 10px;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(22, 119, 255, 0.14);
+}
+
+.data-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(27,36,51,0.05);
+  color: var(--text);
+}
+
+.data-table tr:hover td { background: rgba(22, 119, 255, 0.03); }
+
+.tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+.tag-cyan { color: var(--cyan); background: rgba(22,119,255,0.09); border: 1px solid rgba(22,119,255,0.16); }
+.tag-green { color: var(--green); background: rgba(39,176,95,0.1); border: 1px solid rgba(39,176,95,0.16); }
+.tag-magenta { color: var(--magenta); background: rgba(255,100,130,0.1); border: 1px solid rgba(255,100,130,0.16); }
+.tag-purple { color: var(--purple); background: rgba(122,124,255,0.1); border: 1px solid rgba(122,124,255,0.18); }
+.tag-amber { color: var(--amber); background: rgba(255,159,63,0.1); border: 1px solid rgba(255,159,63,0.18); }
+
+.action-row {
+  margin-top: 16px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border: 1px solid rgba(22, 119, 255, 0.18);
+  background: rgba(255,255,255,0.72);
+  color: var(--cyan);
+  font-family: var(--font);
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+.btn:hover {
+  background: rgba(22,119,255,0.08);
+  border-color: rgba(22, 119, 255, 0.3);
+}
+.btn-primary {
+  background: rgba(22,119,255,0.1);
+  border-color: rgba(22, 119, 255, 0.28);
+}
+
+/* ─── Settings Drawer ─── */
+.settings-overlay {
+  position: fixed; inset: 0;
+  background: rgba(27, 36, 51, 0.2);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+.settings-overlay.open { opacity: 1; pointer-events: all; }
+
+.settings-drawer {
+  position: fixed;
+  top: 0; right: -420px;
+  width: 400px;
+  height: 100vh;
+  background: var(--bg-panel);
+  backdrop-filter: blur(24px);
+  border-left: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: -20px 0 60px rgba(116, 132, 153, 0.18);
+  z-index: 1001;
+  transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto;
+}
+.settings-drawer.open { right: 0; }
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(27, 36, 51, 0.06);
+  background: linear-gradient(180deg, rgba(255,255,255,0.8) 0%, rgba(247,250,253,0.65) 100%);
+}
+
+.settings-header h2 {
+  font-size: 14px;
+  color: var(--cyan);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.close-btn {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(22, 119, 255, 0.14);
+  background: rgba(255,255,255,0.6);
+  color: var(--text-dim);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  transition: all 0.2s;
+}
+.close-btn:hover {
+  background: rgba(255, 100, 130, 0.08);
+  border-color: rgba(255, 100, 130, 0.3);
+  color: var(--magenta);
+}
+
+.settings-body { padding: 24px; }
+
+.setting-group {
+  margin-bottom: 24px;
+}
+
+.setting-group-title {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(27, 36, 51, 0.04);
+  margin-bottom: 8px;
+  transition: all 0.2s;
+}
+
+.setting-row:hover { background: rgba(22, 119, 255, 0.03); }
+
+.setting-info { display: flex; flex-direction: column; gap: 2px; }
+.setting-name { font-size: 12px; color: var(--text); }
+.setting-desc { font-size: 10px; color: var(--text-muted); }
+
+/* Toggle Switch */
+.toggle {
+  width: 42px; height: 24px;
+  border-radius: 12px;
+  background: rgba(27, 36, 51, 0.12);
+  border: 1px solid rgba(27, 36, 51, 0.08);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.3s;
+  flex-shrink: 0;
+}
+
+.toggle.on {
+  background: rgba(22, 119, 255, 0.2);
+  border-color: rgba(22, 119, 255, 0.3);
+}
+
+.toggle::after {
+  content: '';
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  transition: transform 0.3s;
+}
+
+.toggle.on::after { transform: translateX(18px); }
+
+/* ─── Traffic Chart ─── */
+.chart-container {
+  position: relative;
+  margin-top: 12px;
+}
+
+.chart-canvas {
+  width: 100%;
+  height: 160px;
+  display: block;
+}
+
+.chart-legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.legend-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+/* ─── Quick Actions (bottom bar) ─── */
+.quick-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.quick-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 12px;
+  border-radius: 10px;
+  background: var(--bg-inset);
+  border: 1px solid rgba(27, 36, 51, 0.05);
+  cursor: pointer;
+  transition: all 0.25s;
+  flex: 1;
+  min-width: 100px;
+  text-align: center;
+}
+
+.quick-btn:hover {
+  border-color: rgba(22, 119, 255, 0.18);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(22, 119, 255, 0.08);
+}
+
+.quick-btn .qicon {
+  font-size: 20px;
+}
+
+.quick-btn .qlabel {
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar { width: 7px; height: 7px; }
+::-webkit-scrollbar-track { background: #f2f6fb; }
+::-webkit-scrollbar-thumb { background: rgba(22, 119, 255, 0.28); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(22, 119, 255, 0.44); }
+
+/* ─── Responsive ─── */
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+    padding: 18px; gap: 18px;
+  }
+  .cards-grid { grid-template-columns: 1fr 1fr; }
+  .settings-drawer { width: 100%; right: -100%; }
+}
+
+@media (max-width: 600px) {
+  .layout { padding: 12px; gap: 14px; }
+
+  .title-bar {
+    padding: 10px 12px;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .title-bar .title {
+    position: static; transform: none;
+    margin-left: auto; text-align: right;
+    font-size: 11px; letter-spacing: 0.6px;
+  }
+  .panel-body { padding: 14px; }
+  .brand { gap: 10px; }
+  .brand-icon { width: 42px; height: 42px; font-size: 18px; }
+  .brand-text h1 { font-size: 13px; }
+  .brand-text span { font-size: 10px; }
+  .status-grid,
+  .cards-grid { grid-template-columns: 1fr; }
+  .section-title { font-size: 18px; letter-spacing: 1.5px; }
+  .terminal { padding: 14px; font-size: 12px; }
+  .btn { width: 100%; justify-content: center; }
+}
+</style>
+</head>
+<body>
+
+<!-- Settings Overlay -->
+<div class="settings-overlay" id="settingsOverlay" onclick="toggleSettings()"></div>
+<div class="settings-drawer" id="settingsDrawer">
+  <div class="settings-header">
+    <h2>⚙ 设置</h2>
+    <button class="close-btn" onclick="toggleSettings()">✕</button>
+  </div>
+  <div class="settings-body">
+    <div class="setting-group">
+      <div class="setting-group-title">// 外观</div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-name">动画效果</span>
+          <span class="setting-desc">面板进入和悬停动画</span>
+        </div>
+        <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-name">毛玻璃模糊</span>
+          <span class="setting-desc">面板背景模糊效果</span>
+        </div>
+        <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-name">紧凑模式</span>
+          <span class="setting-desc">减小间距和字号</span>
+        </div>
+        <div class="toggle" onclick="this.classList.toggle('on')"></div>
+      </div>
+    </div>
+    <div class="setting-group">
+      <div class="setting-group-title">// 搜索引擎</div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-name">默认引擎</span>
+          <span class="setting-desc">当前: Google</span>
+        </div>
+        <select style="font-family:var(--font);font-size:11px;background:var(--bg-inset);border:1px solid rgba(22,119,255,0.14);border-radius:8px;padding:6px 10px;color:var(--text);outline:none;cursor:pointer;" id="searchEngine">
+          <option value="google">Google</option>
+          <option value="bing">Bing</option>
+          <option value="duckduckgo">DuckDuckGo</option>
+          <option value="baidu">百度</option>
+        </select>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-name">新窗口打开</span>
+          <span class="setting-desc">搜索结果在新标签页打开</span>
+        </div>
+        <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+      </div>
+    </div>
+    <div class="setting-group">
+      <div class="setting-group-title">// 数据</div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-name">自动刷新</span>
+          <span class="setting-desc">每30秒更新性能指标</span>
+        </div>
+        <div class="toggle on" id="autoRefreshToggle" onclick="this.classList.toggle('on'); toggleAutoRefresh()"></div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-name">显示迷你图</span>
+          <span class="setting-desc">数据卡片中的趋势线</span>
+        </div>
+        <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+      </div>
+    </div>
+    <div class="setting-group">
+      <div class="setting-group-title">// 关于</div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-name">omiku.de</span>
+          <span class="setting-desc">Cyber-Mac Terminal v1.0 · Cloudflare Pages</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Main Layout -->
+<div class="layout">
+  <!-- ─── SIDEBAR ─── -->
+  <div class="sidebar">
+    <div class="panel" style="animation-delay:0.1s">
+      <div class="title-bar">
+        <div class="dots">
+          <div class="dot dot-r"></div>
+          <div class="dot dot-y"></div>
+          <div class="dot dot-g"></div>
+        </div>
+        <span class="title">导航</span>
+      </div>
+      <div class="panel-body">
+        <div class="brand">
+          <div class="brand-icon">鬼</div>
+          <div class="brand-text">
+            <h1>OMIKU.DE</h1>
+            <span>v1.0 // Cyber Terminal</span>
+          </div>
+        </div>
+
+        <div class="nav-section">
+          <div class="nav-label">// 系统</div>
+          <div class="nav-item active" data-page="dashboard">
+            <span class="icon">◉</span> 仪表盘
+          </div>
+          <div class="nav-item" data-page="search">
+            <span class="icon">⌕</span> 搜索引擎
+          </div>
+          <div class="nav-item" data-page="analytics">
+            <span class="icon">◎</span> 流量分析
+          </div>
+          <div class="nav-item" data-page="bookmarks">
+            <span class="icon">⌘</span> 书签收藏
+            <span class="nav-badge">6</span>
+          </div>
+        </div>
+
+        <div class="nav-section">
+          <div class="nav-label">// 工具</div>
+          <div class="nav-item" data-page="terminal">
+            <span class="icon">⌥</span> 终端
+          </div>
+          <div class="nav-item" data-page="notes">
+            <span class="icon">⌗</span> 快捷备忘
+          </div>
+          <div class="nav-item" onclick="toggleSettings()">
+            <span class="icon">⚙</span> 设置
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status Panel (CF Analytics) -->
+    <div class="panel" style="animation-delay:0.25s">
+      <div class="title-bar">
+        <div class="dots">
+          <div class="dot dot-r"></div>
+          <div class="dot dot-y"></div>
+          <div class="dot dot-g"></div>
+        </div>
+        <span class="title">Cloudflare 状态</span>
+      </div>
+      <div class="panel-body">
+        <div class="status-grid">
+          <div class="status-box">
+            <div class="val" id="cfUptime">99.9<span style="font-size:12px;color:var(--text-dim)">%</span></div>
+            <div class="label">可用率</div>
+          </div>
+          <div class="status-box">
+            <div class="val" style="color:var(--green)" id="cfStatus">正常</div>
+            <div class="label">网络</div>
+          </div>
+          <div class="status-box">
+            <div class="val" id="cfLatency">12<span style="font-size:12px;color:var(--text-dim)">ms</span></div>
+            <div class="label">延迟</div>
+          </div>
+          <div class="status-box">
+            <div class="val" style="color:var(--amber)" id="cfRequests">1.2K</div>
+            <div class="label">今日请求</div>
+          </div>
+        </div>
+        <div class="progress-container">
+          <div class="progress-label">
+            <span>带宽用量</span>
+            <span style="color:var(--cyan)" id="bwPercent">34%</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" id="bwFill" style="width:34%; animation: fillIn 2s ease-out 0.5s both;"></div>
+          </div>
+        </div>
+        <div class="progress-container">
+          <div class="progress-label">
+            <span>缓存命中</span>
+            <span style="color:var(--green)" id="cachePercent">89%</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" id="cacheFill" style="width:89%; background: linear-gradient(90deg, var(--green), var(--cyan)); animation: fillIn 2s ease-out 0.8s both;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── MAIN AREA ─── -->
+  <div class="main">
+
+    <!-- Terminal / Search Panel -->
+    <div class="panel" style="animation-delay:0.15s">
+      <div class="title-bar">
+        <div class="dots">
+          <div class="dot dot-r"></div>
+          <div class="dot dot-y"></div>
+          <div class="dot dot-g"></div>
+        </div>
+        <span class="title">Terminal - omiku-shell</span>
+      </div>
+      <div class="panel-body">
+        <div class="header-section">
+          <div class="section-title">OMIKU_TERMINAL</div>
+          <div class="section-subtitle">> 系统已初始化。输入关键词进行搜索，或使用命令操作。</div>
+        </div>
+        <div class="terminal" style="margin-top:16px">
+          <div><span class="prompt">root@omiku:~#</span> init --system</div>
+          <div class="log-line"><span class="timestamp">[系统]</span> Cloudflare Pages 部署就绪 <span class="ok">[OK]</span></div>
+          <div class="log-line"><span class="timestamp">[系统]</span> DNS 解析: omiku.de → CF Edge <span class="ok">[OK]</span></div>
+          <div class="log-line"><span class="timestamp">[系统]</span> SSL/TLS 证书有效 <span class="ok">[OK]</span></div>
+          <div class="log-line"><span class="timestamp">[系统]</span> 缓存规则已加载 <span class="ok">[OK]</span></div>
+          <div class="log-line"><span class="timestamp">[系统]</span> 等待用户指令...</div>
+        </div>
+        <div class="search-row">
+          <span class="prompt">root@omiku:~#</span>
+          <input type="text" class="search-input" id="searchInput" placeholder="输入搜索内容..." autofocus>
+          <button class="search-btn" onclick="doSearch()">搜索</button>
+        </div>
+        <div class="search-results" id="searchResults"></div>
+      </div>
+    </div>
+
+    <!-- Data Cards -->
+    <div class="cards-grid">
+      <div class="data-card" style="animation-delay: 0.3s;">
+        <div class="card-icon">◉</div>
+        <div class="card-value" id="cardVisitors">846</div>
+        <div class="card-label">独立访客</div>
+        <div class="card-change change-up">↗ +18.2%</div>
+        <div class="spark-wrap" id="spark1"></div>
+      </div>
+      <div class="data-card" style="animation-delay: 0.4s;">
+        <div class="card-icon">⌘</div>
+        <div class="card-value" style="color:var(--green)" id="cardPageviews">3.4K</div>
+        <div class="card-label">页面浏览</div>
+        <div class="card-change change-up">↗ +12.7%</div>
+        <div class="spark-wrap" id="spark2"></div>
+      </div>
+      <div class="data-card" style="animation-delay: 0.5s;">
+        <div class="card-icon">◌</div>
+        <div class="card-value" style="color:var(--purple)" id="cardBandwidth">1.8<span style="font-size:14px">GB</span></div>
+        <div class="card-label">带宽消耗</div>
+        <div class="card-change change-down">↗ +24%</div>
+        <div class="spark-wrap" id="spark3"></div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="panel" style="animation-delay:0.3s">
+      <div class="title-bar">
+        <div class="dots">
+          <div class="dot dot-r"></div>
+          <div class="dot dot-y"></div>
+          <div class="dot dot-g"></div>
+        </div>
+        <span class="title">快捷入口</span>
+      </div>
+      <div class="panel-body">
+        <div class="quick-actions">
+          <div class="quick-btn" onclick="window.open('https://github.com','_blank')">
+            <span class="qicon">⌥</span>
+            <span class="qlabel">GitHub</span>
+          </div>
+          <div class="quick-btn" onclick="window.open('https://dash.cloudflare.com','_blank')">
+            <span class="qicon">☁</span>
+            <span class="qlabel">CF 控制台</span>
+          </div>
+          <div class="quick-btn" onclick="window.open('https://chat.openai.com','_blank')">
+            <span class="qicon">◎</span>
+            <span class="qlabel">ChatGPT</span>
+          </div>
+          <div class="quick-btn" onclick="window.open('https://claude.ai','_blank')">
+            <span class="qicon">◈</span>
+            <span class="qlabel">Claude</span>
+          </div>
+          <div class="quick-btn" onclick="window.open('https://www.youtube.com','_blank')">
+            <span class="qicon">▶</span>
+            <span class="qlabel">YouTube</span>
+          </div>
+          <div class="quick-btn" onclick="window.open('https://twitter.com','_blank')">
+            <span class="qicon">✦</span>
+            <span class="qlabel">X / Twitter</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Traffic Chart Panel -->
+    <div class="panel" style="animation-delay:0.35s">
+      <div class="title-bar">
+        <div class="dots">
+          <div class="dot dot-r"></div>
+          <div class="dot dot-y"></div>
+          <div class="dot dot-g"></div>
+        </div>
+        <span class="title">流量趋势 - 7日</span>
+      </div>
+      <div class="panel-body">
+        <div class="chart-container">
+          <canvas class="chart-canvas" id="trafficChart"></canvas>
+        </div>
+        <div class="chart-legend">
+          <span><span class="legend-dot" style="background:var(--cyan)"></span>请求数</span>
+          <span><span class="legend-dot" style="background:var(--green)"></span>缓存命中</span>
+          <span><span class="legend-dot" style="background:var(--magenta)"></span>错误率</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Activity Log -->
+    <div class="panel" style="animation-delay:0.4s">
+      <div class="title-bar">
+        <div class="dots">
+          <div class="dot dot-r"></div>
+          <div class="dot dot-y"></div>
+          <div class="dot dot-g"></div>
+        </div>
+        <span class="title">访问日志</span>
+      </div>
+      <div class="panel-body">
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>时间</th>
+                <th>路径</th>
+                <th>来源</th>
+                <th>状态</th>
+              </tr>
+            </thead>
+            <tbody id="logTable">
+              <tr>
+                <td style="color:var(--amber)">12:42:06</td>
+                <td>/</td>
+                <td>DE · 柏林</td>
+                <td><span class="tag tag-green">200</span></td>
+              </tr>
+              <tr>
+                <td style="color:var(--amber)">12:41:58</td>
+                <td>/api/status</td>
+                <td>US · 旧金山</td>
+                <td><span class="tag tag-green">200</span></td>
+              </tr>
+              <tr>
+                <td style="color:var(--amber)">12:41:42</td>
+                <td>/assets/main.css</td>
+                <td>JP · 东京</td>
+                <td><span class="tag tag-cyan">304</span></td>
+              </tr>
+              <tr>
+                <td style="color:var(--amber)">12:41:30</td>
+                <td>/favicon.ico</td>
+                <td>CN · 上海</td>
+                <td><span class="tag tag-cyan">304</span></td>
+              </tr>
+              <tr>
+                <td style="color:var(--amber)">12:40:55</td>
+                <td>/wp-admin</td>
+                <td>RU · 莫斯科</td>
+                <td><span class="tag tag-magenta">403</span></td>
+              </tr>
+              <tr>
+                <td style="color:var(--amber)">12:40:12</td>
+                <td>/.env</td>
+                <td>BR · 圣保罗</td>
+                <td><span class="tag tag-magenta">403</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="action-row">
+          <button class="btn btn-primary" onclick="addRandomLog()">⌥ 模拟请求</button>
+          <button class="btn" onclick="clearLogs()">◉ 清空日志</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ─── Search ───
+const searchInput = document.getElementById('searchInput');
+const searchResults = document.getElementById('searchResults');
+
+const engines = {
+  google: q => `https://www.google.com/search?q=${encodeURIComponent(q)}`,
+  bing: q => `https://www.bing.com/search?q=${encodeURIComponent(q)}`,
+  duckduckgo: q => `https://duckduckgo.com/?q=${encodeURIComponent(q)}`,
+  baidu: q => `https://www.baidu.com/s?wd=${encodeURIComponent(q)}`
+};
+
+function doSearch() {
+  const q = searchInput.value.trim();
+  if (!q) return;
+  const engine = document.getElementById('searchEngine').value;
+  window.open(engines[engine](q), '_blank');
+
+  // Show "executed" in terminal style
+  searchResults.className = 'search-results show';
+  searchResults.innerHTML = `
+    <div style="margin-bottom:8px;color:var(--green);font-weight:600;">
+      root@omiku:~# search --engine=${engine} "${q}"
+    </div>
+    <div style="color:var(--text-dim);font-size:12px;">
+      <span class="timestamp">[${new Date().toLocaleTimeString('zh-CN')}]</span>
+      已通过 ${engine.charAt(0).toUpperCase() + engine.slice(1)} 打开搜索: "${q}" <span class="ok">[OK]</span>
+    </div>
+    <div class="search-engine-hint">搜索引擎: ${engine.charAt(0).toUpperCase() + engine.slice(1)} · 可在设置中更改</div>
+  `;
+}
+
+searchInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') doSearch();
+});
+
+// ─── Settings ───
+function toggleSettings() {
+  document.getElementById('settingsOverlay').classList.toggle('open');
+  document.getElementById('settingsDrawer').classList.toggle('open');
+}
+
+// ─── Nav Items ───
+document.querySelectorAll('.nav-item[data-page]').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    item.classList.add('active');
+    const page = item.dataset.page;
+    if (page === 'search') searchInput.focus();
+  });
+});
+
+// ─── CF Status Simulation ───
+function randomBetween(a, b) { return Math.floor(Math.random() * (b - a + 1)) + a; }
+
+function updateCFStats() {
+  const latency = randomBetween(8, 28);
+  document.getElementById('cfLatency').innerHTML = latency + '<span style="font-size:12px;color:var(--text-dim)">ms</span>';
+
+  const reqs = (randomBetween(800, 2400) / 1000).toFixed(1) + 'K';
+  document.getElementById('cfRequests').textContent = reqs;
+
+  const bw = randomBetween(25, 55);
+  document.getElementById('bwPercent').textContent = bw + '%';
+  document.getElementById('bwFill').style.width = bw + '%';
+
+  const cache = randomBetween(82, 96);
+  document.getElementById('cachePercent').textContent = cache + '%';
+  document.getElementById('cacheFill').style.width = cache + '%';
+
+  // Update cards
+  const visitors = randomBetween(600, 1400);
+  document.getElementById('cardVisitors').textContent = visitors;
+
+  const pv = (randomBetween(2000, 5500) / 1000).toFixed(1) + 'K';
+  document.getElementById('cardPageviews').textContent = pv;
+
+  const bwCard = (randomBetween(10, 32) / 10).toFixed(1);
+  document.getElementById('cardBandwidth').innerHTML = bwCard + '<span style="font-size:14px">GB</span>';
+}
+
+let autoRefreshInterval = setInterval(updateCFStats, 30000);
+
+function toggleAutoRefresh() {
+  const t = document.getElementById('autoRefreshToggle');
+  if (t.classList.contains('on')) {
+    autoRefreshInterval = setInterval(updateCFStats, 30000);
+  } else {
+    clearInterval(autoRefreshInterval);
+  }
+}
+
+// ─── Sparklines ───
+function drawSparkline(containerId, data, color) {
+  const wrap = document.getElementById(containerId);
+  if (!wrap) return;
+  const w = wrap.clientWidth || 200;
+  const h = 32;
+  const max = Math.max(...data);
+  const min = Math.min(...data);
+  const range = max - min || 1;
+  const step = w / (data.length - 1);
+
+  const points = data.map((v, i) => `${i * step},${h - ((v - min) / range) * (h - 4) - 2}`).join(' ');
+
+  wrap.innerHTML = `
+    <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+      <polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+    </svg>
+  `;
+}
+
+function genData(n, min, max) {
+  const arr = [];
+  let v = randomBetween(min, max);
+  for (let i = 0; i < n; i++) {
+    v += randomBetween(-8, 10);
+    v = Math.max(min, Math.min(max, v));
+    arr.push(v);
+  }
+  return arr;
+}
+
+setTimeout(() => {
+  drawSparkline('spark1', genData(20, 30, 90), 'var(--cyan)');
+  drawSparkline('spark2', genData(20, 40, 100), 'var(--green)');
+  drawSparkline('spark3', genData(20, 20, 70), 'var(--purple)');
+}, 600);
+
+// ─── Traffic Chart (Canvas) ───
+function drawTrafficChart() {
+  const canvas = document.getElementById('trafficChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+  const W = rect.width;
+  const H = rect.height;
+
+  const days = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+  const requests = [320, 480, 420, 560, 710, 890, 640];
+  const cached =   [280, 410, 370, 490, 620, 790, 560];
+  const errors =   [5,   8,   3,   12,  7,   4,   9];
+
+  const maxVal = Math.max(...requests) * 1.15;
+  const padL = 40, padR = 20, padT = 10, padB = 30;
+  const chartW = W - padL - padR;
+  const chartH = H - padT - padB;
+  const step = chartW / (days.length - 1);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(22, 119, 255, 0.06)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = padT + (chartH / 4) * i;
+    ctx.beginPath();
+    ctx.moveTo(padL, y);
+    ctx.lineTo(W - padR, y);
+    ctx.stroke();
+
+    ctx.fillStyle = '#9aa4b2';
+    ctx.font = '10px JetBrains Mono';
+    ctx.textAlign = 'right';
+    ctx.fillText(Math.round(maxVal - (maxVal / 4) * i), padL - 6, y + 4);
+  }
+
+  // Day labels
+  ctx.fillStyle = '#9aa4b2';
+  ctx.font = '10px JetBrains Mono';
+  ctx.textAlign = 'center';
+  days.forEach((d, i) => {
+    ctx.fillText(d, padL + step * i, H - 8);
+  });
+
+  function drawLine(data, color, width) {
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    data.forEach((v, i) => {
+      const x = padL + step * i;
+      const y = padT + chartH - (v / maxVal) * chartH;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    // Fill area
+    ctx.lineTo(padL + step * (data.length - 1), padT + chartH);
+    ctx.lineTo(padL, padT + chartH);
+    ctx.closePath();
+    ctx.fillStyle = color.replace('1)', '0.06)').replace('rgb', 'rgba');
+    ctx.fill();
+  }
+
+  function hexToRgba(color, a) {
+    return color + '';
+  }
+
+  // Draw lines
+  ctx.save();
+  drawLine(requests, 'rgba(22, 119, 255, 1)', 2);
+  drawLine(cached, 'rgba(39, 176, 95, 1)', 1.5);
+
+  // Errors (scaled up for visibility)
+  const errScaled = errors.map(e => e * 15);
+  drawLine(errScaled, 'rgba(255, 100, 130, 1)', 1.5);
+  ctx.restore();
+
+  // Dots
+  requests.forEach((v, i) => {
+    const x = padL + step * i;
+    const y = padT + chartH - (v / maxVal) * chartH;
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(22, 119, 255, 0.9)';
+    ctx.fill();
+  });
+}
+
+setTimeout(drawTrafficChart, 400);
+window.addEventListener('resize', drawTrafficChart);
+
+// ─── Log Simulation ───
+const logPaths = ['/', '/api/status', '/assets/style.css', '/favicon.ico', '/images/logo.png', '/.env', '/wp-login.php', '/api/data', '/manifest.json', '/robots.txt'];
+const logLocations = ['DE · 柏林', 'US · 纽约', 'JP · 东京', 'CN · 北京', 'FR · 巴黎', 'KR · 首尔', 'GB · 伦敦', 'SG · 新加坡', 'AU · 悉尼', 'BR · 圣保罗'];
+const logStatuses = [
+  { code: '200', cls: 'tag-green', weight: 50 },
+  { code: '304', cls: 'tag-cyan', weight: 25 },
+  { code: '403', cls: 'tag-magenta', weight: 10 },
+  { code: '404', cls: 'tag-amber', weight: 10 },
+  { code: '500', cls: 'tag-magenta', weight: 5 }
+];
+
+function pickWeighted(items) {
+  const total = items.reduce((s, i) => s + i.weight, 0);
+  let r = Math.random() * total;
+  for (const item of items) {
+    r -= item.weight;
+    if (r <= 0) return item;
+  }
+  return items[0];
+}
+
+function addRandomLog() {
+  const table = document.getElementById('logTable');
+  const time = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+  const path = logPaths[randomBetween(0, logPaths.length - 1)];
+  const loc = logLocations[randomBetween(0, logLocations.length - 1)];
+  const status = pickWeighted(logStatuses);
+
+  const row = document.createElement('tr');
+  row.style.animation = 'panelIn 0.3s ease-out both';
+  row.innerHTML = `
+    <td style="color:var(--amber)">${time}</td>
+    <td>${path}</td>
+    <td>${loc}</td>
+    <td><span class="tag ${status.cls}">${status.code}</span></td>
+  `;
+  table.insertBefore(row, table.firstChild);
+
+  // Keep max 20 rows
+  while (table.children.length > 20) {
+    table.removeChild(table.lastChild);
+  }
+}
+
+function clearLogs() {
+  const table = document.getElementById('logTable');
+  table.innerHTML = `
+    <tr style="animation: panelIn 0.3s ease-out both;">
+      <td style="color:var(--text-muted)" colspan="4">日志已清空 · ${new Date().toLocaleTimeString('zh-CN', { hour12: false })}</td>
+    </tr>
+  `;
+}
+</script>
+</body>
+</html>
