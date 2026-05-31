@@ -423,45 +423,180 @@ function initWindowManager() {
 }
 
 function closeWindow(panel) {
-  panel.classList.remove("maximized");
+  panel.classList.remove("maximized", "minimizing", "restoring", "maximizing", "unmaximizing");
   panel.hidden = true;
   refreshMaximizedClass();
   persistWindowState({ persistClosed: false });
 }
 
 function minimizeWindow(panel) {
-  panel.classList.remove("maximized");
-  panel.hidden = true;
-  panel.dataset.minimized = "true";
+  if (panel.dataset.animating === "true") return;
+  panel.dataset.animating = "true";
+  setWindowAnimationActive(true);
+  panel.classList.remove("maximized", "maximizing", "unmaximizing", "restoring");
+  panel.classList.add("window-animating-panel");
   refreshMaximizedClass();
-  persistWindowState();
-  renderWindowDock();
+
+  animatePanelToRect(panel, getDockTargetRect(), { opacityOut: true, duration: 320 }).finally(() => {
+    panel.classList.remove("window-animating-panel");
+    panel.hidden = true;
+    panel.dataset.minimized = "true";
+    panel.dataset.animating = "false";
+    setWindowAnimationActive(false);
+    persistWindowState();
+    renderWindowDock();
+  }, 380);
 }
 
 function restoreWindow(id) {
   const panel = document.querySelector(`.window-panel[data-window="${cssEscape(id)}"]`);
   if (!panel) return;
+  if (panel.dataset.animating === "true") return;
+  panel.dataset.animating = "true";
+  setWindowAnimationActive(true);
   panel.hidden = false;
+  panel.classList.remove("minimizing", "maximizing", "unmaximizing", "restoring");
+  panel.classList.add("window-animating-panel");
   panel.dataset.minimized = "false";
-  persistWindowState();
-  renderWindowDock();
+  animatePanelFromRect(panel, getDockTargetRect(), { opacityIn: true, duration: 360 }).finally(() => {
+    panel.classList.remove("window-animating-panel");
+    panel.dataset.animating = "false";
+    setWindowAnimationActive(false);
+    persistWindowState();
+    renderWindowDock();
+  });
 }
 
 function toggleMaximize(panel) {
+  if (panel.dataset.animating === "true") return;
   const isMaximized = panel.classList.contains("maximized");
-  document.querySelectorAll(".window-panel.maximized").forEach((item) => item.classList.remove("maximized"));
-  if (!isMaximized) {
+
+  for (const item of document.querySelectorAll(".window-panel.maximized")) {
+    if (item !== panel) item.classList.remove("maximized", "maximizing", "unmaximizing");
+  }
+
+  panel.dataset.animating = "true";
+  setWindowAnimationActive(true);
+  if (isMaximized) {
+    const fromRect = panel.getBoundingClientRect();
+    panel.classList.remove("maximized", "maximizing", "unmaximizing");
+    refreshMaximizedClass();
+    const toRect = panel.getBoundingClientRect();
+    panel.classList.add("window-animating-panel");
+    animatePanelFlip(panel, fromRect, toRect, { duration: 300 }).finally(() => {
+      panel.classList.remove("window-animating-panel");
+      panel.dataset.animating = "false";
+      setWindowAnimationActive(false);
+      refreshMaximizedClass();
+      persistWindowState();
+      renderWindowDock();
+    });
+  } else {
+    const fromRect = panel.getBoundingClientRect();
     panel.hidden = false;
     panel.dataset.minimized = "false";
-    panel.classList.add("maximized");
+    panel.classList.remove("unmaximizing", "restoring", "maximizing");
+    panel.classList.add("maximized", "window-animating-panel");
+    refreshMaximizedClass();
+    const toRect = panel.getBoundingClientRect();
+    animatePanelFlip(panel, fromRect, toRect, { duration: 330 }).finally(() => {
+      panel.classList.remove("window-animating-panel");
+      panel.dataset.animating = "false";
+      setWindowAnimationActive(false);
+      refreshMaximizedClass();
+      persistWindowState();
+      renderWindowDock();
+    });
   }
   refreshMaximizedClass();
-  persistWindowState();
-  renderWindowDock();
 }
 
 function refreshMaximizedClass() {
   document.body.classList.toggle("has-maximized-window", Boolean(document.querySelector(".window-panel.maximized")));
+}
+
+function setWindowAnimationActive(active) {
+  document.body.classList.toggle("window-animating", active);
+}
+
+function getDockTargetRect() {
+  const dock = els.windowDock && !els.windowDock.hidden ? els.windowDock.getBoundingClientRect() : null;
+  const width = Math.min(140, Math.max(92, window.innerWidth * 0.18));
+  const height = 36;
+  return {
+    left: dock ? dock.left + 10 : 18,
+    top: dock ? dock.top + 8 : window.innerHeight - height - 18,
+    width,
+    height,
+  };
+}
+
+function animatePanelToRect(panel, targetRect, options = {}) {
+  const fromRect = panel.getBoundingClientRect();
+  const toRect = {
+    left: targetRect.left,
+    top: targetRect.top,
+    width: targetRect.width,
+    height: targetRect.height,
+  };
+  return animatePanelTransform(panel, fromRect, toRect, {
+    direction: "out",
+    duration: options.duration || 320,
+    opacityOut: options.opacityOut,
+  });
+}
+
+function animatePanelFromRect(panel, sourceRect, options = {}) {
+  const toRect = panel.getBoundingClientRect();
+  const fromRect = {
+    left: sourceRect.left,
+    top: sourceRect.top,
+    width: sourceRect.width,
+    height: sourceRect.height,
+  };
+  return animatePanelTransform(panel, fromRect, toRect, {
+    direction: "in",
+    duration: options.duration || 360,
+    opacityIn: options.opacityIn,
+  });
+}
+
+function animatePanelFlip(panel, fromRect, toRect, options = {}) {
+  return animatePanelTransform(panel, fromRect, toRect, {
+    direction: "in",
+    duration: options.duration || 320,
+  });
+}
+
+function animatePanelTransform(panel, fromRect, toRect, options) {
+  const invertScaleX = fromRect.width && toRect.width ? fromRect.width / toRect.width : 1;
+  const invertScaleY = fromRect.height && toRect.height ? fromRect.height / toRect.height : 1;
+  const outScaleX = fromRect.width ? toRect.width / fromRect.width : 1;
+  const outScaleY = fromRect.height ? toRect.height / fromRect.height : 1;
+  const invert = `translate3d(${fromRect.left - toRect.left}px, ${fromRect.top - toRect.top}px, 0) scale(${invertScaleX}, ${invertScaleY})`;
+  const target = `translate3d(${toRect.left - fromRect.left}px, ${toRect.top - fromRect.top}px, 0) scale(${outScaleX}, ${outScaleY})`;
+  const identity = "translate3d(0, 0, 0) scale(1, 1)";
+  const easing = "cubic-bezier(0.22, 1, 0.36, 1)";
+  const duration = options.duration || 320;
+  const keyframes =
+    options.direction === "out"
+      ? [
+          { transform: identity, opacity: 1 },
+          { transform: target, opacity: options.opacityOut ? 0.18 : 1 },
+        ]
+      : [
+          { transform: invert, opacity: options.opacityIn ? 0.18 : 1 },
+          { transform: identity, opacity: 1 },
+        ];
+
+  panel.style.transformOrigin = "top left";
+  const animation = panel.animate(keyframes, { duration, easing, fill: "both" });
+  return animation.finished
+    .catch(() => null)
+    .finally(() => {
+      animation.cancel();
+      panel.style.transformOrigin = "";
+    });
 }
 
 function restoreWindowState() {
@@ -741,7 +876,7 @@ function render() {
 
   els.sideHealthy.textContent = String(summary.healthyInstances);
   els.sideProblems.textContent = String(problems);
-  els.problemBadge.textContent = String(problems);
+  if (els.problemBadge) els.problemBadge.textContent = String(problems);
   els.metricInstances.textContent = String(summary.instances);
   els.metricInstanceHint.textContent = `${summary.healthyInstances} 健康 / ${summary.errorInstances} 异常`;
   els.metricFiles.textContent = String(summary.totalFiles);
