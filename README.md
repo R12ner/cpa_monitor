@@ -72,6 +72,25 @@ npm run deploy
 
 本项目应优先使用 Cloudflare 环境变量和 secrets，避免把密钥写入前端代码或仓库。
 
+`wrangler.toml` 已内置非敏感默认配置，GitHub 连接 Cloudflare Pages 后无需在创建页面填写这些变量：
+
+```toml
+CPA_INSTANCE_ID = "main"
+CPA_INSTANCE_NAME = "Main CPA"
+CPA_BASE_URL = "https://api.omiku.de"
+MONITOR_TARGET_URL = "https://chatgpt.com/backend-api/wham/usage"
+CHECK_TIMEOUT_MS = "30000"
+CHECK_CONCURRENCY = "8"
+SKIP_DISABLED = "true"
+```
+
+Cloudflare Pages 网页端只需要添加这两个加密变量：
+
+```bash
+CPA_ACCESS_KEY
+ADMIN_PASSWORD
+```
+
 复制 `.env.example` 为 `.dev.vars` 用于 `wrangler pages dev` 本地开发。推荐用分字段配置，最不容易被引号或换行影响：
 
 ```bash
@@ -101,7 +120,7 @@ wrangler pages secret put CPA_INSTANCES_JSON --project-name cpa-monitor
 wrangler pages secret put ADMIN_PASSWORD --project-name cpa-monitor
 ```
 
-`MONITOR_TARGET_URL`、`CHECK_TIMEOUT_MS`、`CHECK_CONCURRENCY`、`SKIP_DISABLED` 已在 `wrangler.toml` 中提供默认值，也可以在 Cloudflare Pages 的环境变量中覆盖。
+`CPA_INSTANCE_ID`、`CPA_INSTANCE_NAME`、`CPA_BASE_URL`、`MONITOR_TARGET_URL`、`CHECK_TIMEOUT_MS`、`CHECK_CONCURRENCY`、`SKIP_DISABLED` 已在 `wrangler.toml` 中提供默认值，也可以在 Cloudflare Pages 的环境变量中覆盖。
 
 `ADMIN_PASSWORD` 是后台登录密码。设置后，前端需要先登录，所有数据 API 都会要求携带登录 token；不设置时默认不启用登录保护，便于本地调试。
 
