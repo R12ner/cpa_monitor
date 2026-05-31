@@ -3,13 +3,105 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CPA Monitor // Probe</title>
+  <title>CPA 额度监测 // 探针</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
+  <nav class="control-center" id="controlCenter">
+    <button class="control-btn theme-toggle" type="button" id="themeToggle" aria-label="切换夜间模式" title="切换夜间模式">
+      <i class="ph-bold ph-moon"></i>
+    </button>
+    <button class="control-btn settings-toggle" type="button" id="settingsToggle" aria-label="设置" title="设置">
+      <i class="ph-bold ph-gear-six"></i>
+    </button>
+    <button class="control-btn admin-toggle" type="button" id="adminToggle" aria-label="后台登录" title="后台登录">
+      <i class="ph-bold ph-user"></i>
+    </button>
+  </nav>
+
+  <div class="login-screen" id="loginScreen" hidden>
+    <form class="login-card" id="loginForm">
+      <div class="login-head">
+        <div class="brand-icon">CPA</div>
+        <div>
+          <h1>后台管理</h1>
+          <p>请输入访问密码以进入监测中心</p>
+        </div>
+      </div>
+      <div class="login-body">
+        <div class="input-group">
+          <input id="passwordInput" type="password" autocomplete="current-password" placeholder=" " required>
+          <label for="passwordInput">访问密码</label>
+          <div class="input-line"></div>
+        </div>
+        <button class="btn primary full-width" type="submit">立即登录</button>
+        <div class="login-error" id="loginError"></div>
+      </div>
+    </form>
+  </div>
+
+  <div class="settings-overlay" id="settingsOverlay" hidden></div>
+  <aside class="settings-drawer" id="settingsDrawer" hidden>
+    <div class="settings-head">
+      <div class="settings-title">
+        <strong>显示设置</strong>
+        <span>个性化您的监测面板</span>
+      </div>
+      <button type="button" id="settingsClose" class="close-btn" aria-label="关闭设置">
+        <i class="ph-bold ph-x"></i>
+      </button>
+    </div>
+    <div class="settings-body">
+      <div class="settings-group">
+        <div class="group-label">显示组件</div>
+        <label class="switch-item">
+          <span>Codex 额度</span>
+          <input type="checkbox" data-component-toggle="quota">
+          <i class="switch-track"></i>
+        </label>
+        <label class="switch-item">
+          <span>筛选工具</span>
+          <input type="checkbox" data-component-toggle="filters">
+          <i class="switch-track"></i>
+        </label>
+        <label class="switch-item">
+          <span>认证文件列表</span>
+          <input type="checkbox" data-component-toggle="auth-files">
+          <i class="switch-track"></i>
+        </label>
+        <label class="switch-item">
+          <span>实时日志</span>
+          <input type="checkbox" data-component-toggle="logs">
+          <i class="switch-track"></i>
+        </label>
+        <label class="switch-item">
+          <span>统计卡片</span>
+          <input type="checkbox" data-component-toggle="metrics">
+          <i class="switch-track"></i>
+        </label>
+        <label class="switch-item">
+          <span>顶部标题</span>
+          <input type="checkbox" data-component-toggle="hero">
+          <i class="switch-track"></i>
+        </label>
+      </div>
+      <div class="settings-group">
+        <div class="group-label">端点配置</div>
+        <div class="endpoint-form">
+          <input id="endpointName" type="text" placeholder="名称，例如 LA CPA">
+          <input id="endpointBaseUrl" type="url" placeholder="端点 URL，例如 https://api.example.com">
+          <input id="endpointAccessKey" type="password" placeholder="管理密钥">
+          <button class="btn primary" type="button" id="addEndpointBtn">添加 / 更新端点</button>
+        </div>
+        <div class="endpoint-list" id="endpointList"></div>
+      </div>
+    </div>
+  </aside>
+
   <div class="layout">
     <aside class="sidebar">
       <section class="panel">
@@ -19,49 +111,41 @@
             <span class="dot dot-y"></span>
             <span class="dot dot-g"></span>
           </div>
-          <span class="title">NAV</span>
+          <span class="title">导航</span>
         </div>
         <div class="panel-body">
           <div class="brand">
             <div class="brand-icon">CPA</div>
             <div class="brand-text">
-              <h1>CPA Monitor</h1>
-              <span>Cloudflare Probe</span>
+              <h1>CPA 监测</h1>
+              <span>Cloudflare 探针</span>
             </div>
           </div>
 
           <div class="nav-section">
-            <div class="nav-label">// Monitor</div>
-            <button class="nav-item active" type="button" data-action="refresh-list">
+            <div class="nav-label">// 监测</div>
+            <button class="nav-item active" type="button" data-target-kind="codex">
               <span class="icon">◉</span>
-              Refresh list
-            </button>
-            <button class="nav-item" type="button" data-action="check-all">
-              <span class="icon">◎</span>
-              Check all
+              Codex
               <span class="nav-badge" id="problemBadge">0</span>
-            </button>
-            <button class="nav-item" type="button" data-action="export-json">
-              <span class="icon">⌘</span>
-              Export JSON
             </button>
           </div>
 
           <div class="nav-section">
-            <div class="nav-label">// Status</div>
+            <div class="nav-label">// 状态</div>
             <div class="status-grid compact">
               <div class="status-box">
                 <div class="val" id="sideHealthy">0</div>
-                <div class="label">Healthy</div>
+                <div class="label">健康实例</div>
               </div>
               <div class="status-box">
                 <div class="val danger" id="sideProblems">0</div>
-                <div class="label">Problems</div>
+                <div class="label">异常账号</div>
               </div>
             </div>
           </div>
 
-          <div class="terminal-note" id="configNote">Waiting for config</div>
+          <div class="terminal-note" id="configNote">等待配置加载</div>
         </div>
       </section>
 
@@ -72,201 +156,216 @@
             <span class="dot dot-y"></span>
             <span class="dot dot-g"></span>
           </div>
-          <span class="title">Worker</span>
+          <span class="title">工作器</span>
         </div>
         <div class="panel-body">
           <div class="kv-list">
-            <div><span>API</span><strong id="apiStatus">checking</strong></div>
-            <div><span>Timeout</span><strong id="timeoutMs">-</strong></div>
-            <div><span>Concurrency</span><strong id="concurrency">-</strong></div>
-            <div><span>Skip Disabled</span><strong id="skipDisabled">-</strong></div>
+            <div><span>接口</span><strong id="apiStatus">检查中</strong></div>
+            <div><span>超时</span><strong id="timeoutMs">-</strong></div>
+            <div><span>并发</span><strong id="concurrency">-</strong></div>
+            <div><span>跳过禁用</span><strong id="skipDisabled">-</strong></div>
           </div>
         </div>
       </section>
     </aside>
 
     <main class="main">
-      <section class="panel hero-panel">
+      <section class="panel hero-panel configurable-panel" data-component="hero">
         <div class="title-bar">
           <div class="dots">
             <span class="dot dot-r"></span>
             <span class="dot dot-y"></span>
             <span class="dot dot-g"></span>
           </div>
-          <span class="title">CPA PROBE</span>
+          <span class="title">CPA 探针</span>
         </div>
         <div class="panel-body hero-body">
           <div>
             <div class="eyebrow">root@cf-worker:~# monitor --target cpa</div>
-            <h2>CPA quota monitor</h2>
-            <p>Cached auth-file status, usage checks, and quota progress for CPA reverse proxy instances.</p>
-          </div>
-          <div class="action-row">
-            <button class="btn primary" type="button" id="refreshBtn">Refresh list</button>
-            <button class="btn" type="button" id="checkBtn">Check all</button>
+            <h2>CPA 额度监测</h2>
+            <p>缓存认证文件状态、用量检测结果和 CPA 反代实例的剩余额度。</p>
           </div>
         </div>
       </section>
 
-      <section class="metric-grid" aria-label="Summary">
+      <section class="metric-grid configurable-panel" data-component="metrics" aria-label="Summary">
         <div class="metric-card">
-          <span>Instances</span>
+          <span>实例</span>
           <strong id="metricInstances">0</strong>
-          <small id="metricInstanceHint">0 healthy</small>
+          <small id="metricInstanceHint">0 健康</small>
         </div>
         <div class="metric-card">
-          <span>Auth files</span>
+          <span>认证文件</span>
           <strong id="metricFiles">0</strong>
-          <small>total files</small>
+          <small>全部文件</small>
         </div>
         <div class="metric-card">
-          <span>OK</span>
+          <span>正常</span>
           <strong class="ok" id="metricOk">0</strong>
-          <small>2xx usage</small>
+          <small>2xx 用量接口</small>
         </div>
         <div class="metric-card">
           <span>401</span>
           <strong class="danger" id="metricInvalid">0</strong>
-          <small>invalid token</small>
+          <small>认证失效</small>
         </div>
         <div class="metric-card">
-          <span>Limited</span>
+          <span>受限</span>
           <strong class="warn" id="metricLimited">0</strong>
           <small>403 / 429</small>
         </div>
         <div class="metric-card">
-          <span>Errors</span>
+          <span>错误</span>
           <strong class="danger" id="metricErrors">0</strong>
-          <small>network / upstream</small>
+          <small>网络 / 上游</small>
         </div>
       </section>
 
-      <section class="panel">
+      <section class="panel window-panel configurable-panel" data-window="quota" data-component="quota" draggable="true">
         <div class="title-bar">
-          <div class="dots">
-            <span class="dot dot-r"></span>
-            <span class="dot dot-y"></span>
-            <span class="dot dot-g"></span>
+          <div class="dots window-controls">
+            <button class="dot dot-r" type="button" data-window-action="close" title="关闭"></button>
+            <button class="dot dot-y" type="button" data-window-action="minimize" title="收纳"></button>
+            <button class="dot dot-g" type="button" data-window-action="maximize" title="放大"></button>
           </div>
-          <span class="title">QUOTA</span>
+          <span class="title" id="quotaWindowTitle">Codex 额度</span>
         </div>
         <div class="panel-body">
           <div class="quota-toolbar">
             <div>
-              <strong>Codex quota</strong>
+              <strong id="quotaHeading">Codex 额度</strong>
               <span id="quotaCount">0</span>
             </div>
-            <select id="quotaMode">
-              <option value="paged">Paged</option>
-              <option value="all">Show all</option>
-            </select>
+            <div class="quota-actions">
+              <select id="quotaMode">
+                <option value="paged">按页显示</option>
+                <option value="all">显示全部</option>
+              </select>
+              <button class="icon-btn refresh-action" type="button" id="checkBtn" aria-label="检测全部" title="检测全部"></button>
+            </div>
           </div>
           <div class="quota-grid" id="quotaGrid">
-            <div class="empty quota-empty">No quota data yet. Click "Check all" first.</div>
+            <div class="empty quota-empty">暂无额度数据，请先点击“检测全部”。</div>
           </div>
         </div>
       </section>
 
-      <section class="panel">
+      <section class="panel window-panel configurable-panel" data-window="filters" data-component="filters" draggable="true">
         <div class="title-bar">
-          <div class="dots">
-            <span class="dot dot-r"></span>
-            <span class="dot dot-y"></span>
-            <span class="dot dot-g"></span>
+          <div class="dots window-controls">
+            <button class="dot dot-r" type="button" data-window-action="close" title="关闭"></button>
+            <button class="dot dot-y" type="button" data-window-action="minimize" title="收纳"></button>
+            <button class="dot dot-g" type="button" data-window-action="maximize" title="放大"></button>
           </div>
-          <span class="title">FILTERS</span>
+          <span class="title">筛选</span>
         </div>
         <div class="panel-body filters">
           <label>
-            Instance
+            实例
             <select id="instanceFilter"></select>
           </label>
           <label>
-            Status
+            状态
             <select id="statusFilter">
-              <option value="">All</option>
-              <option value="ok">OK</option>
+              <option value="">全部</option>
+              <option value="ok">正常</option>
               <option value="invalid_401">401</option>
-              <option value="limited_or_forbidden">Limited</option>
-              <option value="upstream_error">Upstream error</option>
-              <option value="check_error">Check error</option>
-              <option value="skipped">Skipped</option>
-              <option value="unchecked">Unchecked</option>
+              <option value="limited_or_forbidden">受限</option>
+              <option value="upstream_error">上游错误</option>
+              <option value="check_error">检测错误</option>
+              <option value="skipped">已跳过</option>
+              <option value="unchecked">未检测</option>
             </select>
           </label>
           <label>
-            disabled
+            禁用
             <select id="disabledFilter">
-              <option value="">All</option>
+              <option value="">全部</option>
               <option value="false">false</option>
               <option value="true">true</option>
             </select>
           </label>
           <label class="search-label">
-            Search
-            <input id="searchInput" type="search" placeholder="file id / auth index / account id">
+            搜索
+            <input id="searchInput" type="search" placeholder="文件 ID / 认证索引 / 账号 ID">
           </label>
           <label class="toggle-line">
             <input id="onlyProblems" type="checkbox">
-            Problems only
+            只看异常
           </label>
         </div>
       </section>
 
-      <section class="panel">
+      <section class="panel window-panel configurable-panel" data-window="auth-files" data-component="auth-files" draggable="true">
         <div class="title-bar">
-          <div class="dots">
-            <span class="dot dot-r"></span>
-            <span class="dot dot-y"></span>
-            <span class="dot dot-g"></span>
+          <div class="dots window-controls">
+            <button class="dot dot-r" type="button" data-window-action="close" title="关闭"></button>
+            <button class="dot dot-y" type="button" data-window-action="minimize" title="收纳"></button>
+            <button class="dot dot-g" type="button" data-window-action="maximize" title="放大"></button>
           </div>
-          <span class="title">AUTH FILES</span>
+          <span class="title">认证文件</span>
         </div>
         <div class="panel-body table-wrap">
           <div class="table-toolbar">
             <span id="tableCount">0 rows</span>
-            <span id="lastChecked">Not checked yet</span>
+            <div class="pagination-controls">
+              <label>
+                每页
+                <select id="pageSizeSelect">
+                  <option value="10">10</option>
+                  <option value="25">25</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                </select>
+              </label>
+              <button class="page-btn" type="button" id="prevPageBtn" aria-label="上一页">‹</button>
+              <span id="pageInfo">1 / 1</span>
+              <button class="page-btn" type="button" id="nextPageBtn" aria-label="下一页">›</button>
+            </div>
+            <span id="lastChecked">尚未检测</span>
           </div>
           <div class="responsive-table">
             <table>
               <thead>
                 <tr>
-                  <th>Instance</th>
-                  <th>File</th>
-                  <th>provider</th>
-                  <th>auth_index</th>
-                  <th>disabled</th>
-                  <th>Account</th>
-                  <th>Status</th>
+                  <th>实例</th>
+                  <th>文件</th>
+                  <th>供应商</th>
+                  <th>认证索引</th>
+                  <th>禁用</th>
+                  <th>账号</th>
+                  <th>状态</th>
                   <th>HTTP</th>
-                  <th>Latency</th>
-                  <th>Message</th>
+                  <th>延迟</th>
+                  <th>消息</th>
                 </tr>
               </thead>
               <tbody id="fileTable">
-                <tr><td colspan="10" class="empty">Loading config</td></tr>
+                <tr><td colspan="10" class="empty">正在加载配置</td></tr>
               </tbody>
             </table>
           </div>
         </div>
       </section>
 
-      <section class="panel">
+      <section class="panel window-panel configurable-panel" data-window="logs" data-component="logs" draggable="true">
         <div class="title-bar">
-          <div class="dots">
-            <span class="dot dot-r"></span>
-            <span class="dot dot-y"></span>
-            <span class="dot dot-g"></span>
+          <div class="dots window-controls">
+            <button class="dot dot-r" type="button" data-window-action="close" title="关闭"></button>
+            <button class="dot dot-y" type="button" data-window-action="minimize" title="收纳"></button>
+            <button class="dot dot-g" type="button" data-window-action="maximize" title="放大"></button>
           </div>
-          <span class="title">LOGS</span>
+          <span class="title">日志</span>
         </div>
         <div class="panel-body">
-          <div class="cache-status" id="cacheStatus">No cached check result</div>
+          <div class="cache-status" id="cacheStatus">暂无缓存检测结果</div>
           <div class="log-output" id="logOutput"></div>
         </div>
       </section>
     </main>
   </div>
+
+  <div class="window-dock" id="windowDock" aria-label="已收纳窗口"></div>
 
   <script src="/app.js" type="module"></script>
 </body>

@@ -19,6 +19,20 @@ export async function onRequest(context) {
       return ok({ status: "ok", service: "cpa-monitor" }, requestId, startedAt);
     }
 
+    if (route === "session" && method === "GET") {
+      return ok({ loginRequired: Boolean(getAdminPassword(context.env)) }, requestId, startedAt);
+    }
+
+    if (route === "session" && method === "POST") {
+      const body = await readJson(context.request);
+      const password = getAdminPassword(context.env);
+      if (password && String(body.password || "") !== password) {
+        throw appError("AUTH_FAILED", "密码错误", null, 401);
+      }
+      const token = await createSessionToken(context.env);
+      return ok({ token }, requestId, startedAt);
+    }
+
     if (route === "config" && method === "GET") {
       const config = getRuntimeConfig(context.env);
       return ok(
@@ -28,11 +42,14 @@ export async function onRequest(context) {
           concurrency: config.concurrency,
           skipDisabled: config.skipDisabled,
           instances: config.instances.map(sanitizeInstance),
+          loginRequired: Boolean(getAdminPassword(context.env)),
         },
         requestId,
         startedAt,
       );
     }
+
+    await requireSession(context.request, context.env);
 
     if (route === "instances" && method === "GET") {
       const config = getRuntimeConfig(context.env);
@@ -42,7 +59,9 @@ export async function onRequest(context) {
     if (route === "auth-files" && method === "GET") {
       const config = getRuntimeConfig(context.env);
       const instanceId = url.searchParams.get("instance") || "";
-      const instances = selectInstances(config.instances, instanceId);
+      const instances = mergeRequestInstances(config.instances, url.searchParams.get("instances")).filter((instance) =>
+        !instanceId || instance.id === instanceId,
+      );
       const results = await Promise.all(instances.map((instance) => listAuthFiles(instance, config)));
       return ok({ instances: results }, requestId, startedAt);
     }
@@ -68,7 +87,8 @@ export async function onRequest(context) {
     if (route === "check-all" && method === "POST") {
       const config = getRuntimeConfig(context.env);
       const body = await readOptionalJson(context.request);
-      const instances = selectInstances(config.instances, body.instanceId || "");
+      const allInstances = mergeRequestInstances(config.instances, body.instances);
+      const instances = selectInstances(allInstances, body.instanceId || "");
       const checked = await Promise.all(instances.map((instance) => checkInstance(instance, config)));
       return ok({ instances: checked, summary: summarizeInstances(checked) }, requestId, startedAt);
     }
@@ -108,6 +128,72 @@ function getRuntimeConfig(env) {
     concurrency: Math.min(parsePositiveInt(env.CHECK_CONCURRENCY, DEFAULT_CONCURRENCY), 20),
     skipDisabled: parseBool(env.SKIP_DISABLED, true),
   };
+}
+
+function getAdminPassword(env) {
+  return String(env.ADMIN_PASSWORD || env.CPA_MONITOR_PASSWORD || "").trim();
+}
+
+async function requireSession(request, env) {
+  const password = getAdminPassword(env);
+  if (!password) return;
+
+  const header = request.headers.get("Authorization") || "";
+  const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+  if (!token || !(await verifySessionToken(token, env))) {
+    throw appError("UNAUTHORIZED", "请先登录", null, 401);
+  }
+}
+
+async function createSessionToken(env) {
+  const issuedAt = Date.now();
+  const payload = b64urlEncode(JSON.stringify({ iat: issuedAt, exp: issuedAt + 12 * 60 * 60 * 1000 }));
+  const signature = await signText(payload, env);
+  return `${payload}.${signature}`;
+}
+
+async function verifySessionToken(token, env) {
+  const [payload, signature] = String(token).split(".");
+  if (!payload || !signature) return false;
+  if ((await signText(payload, env)) !== signature) return false;
+
+  try {
+    const data = JSON.parse(b64urlDecode(payload));
+    return Number(data.exp) > Date.now();
+  } catch {
+    return false;
+  }
+}
+
+async function signText(text, env) {
+  const secret = getAdminPassword(env) || "cpa-monitor-dev";
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(text));
+  return b64urlEncodeBytes(new Uint8Array(signature));
+}
+
+function b64urlEncode(text) {
+  return b64urlEncodeBytes(new TextEncoder().encode(text));
+}
+
+function b64urlEncodeBytes(bytes) {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
+}
+
+function b64urlDecode(text) {
+  const normalized = text.replaceAll("-", "+").replaceAll("_", "/");
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+  const binary = atob(padded);
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
 }
 
 function parseInstances(raw) {
@@ -196,7 +282,20 @@ async function checkInstance(instance, config) {
   const listed = await listAuthFiles(instance, config);
   if (!listed.ok) return { ...listed, checks: [] };
 
-  const targets = listed.files.filter((file) => !(config.skipDisabled && file.disabled));
+  const targets = listed.files.filter((file) => !(config.skipDisabled && file.disabled)).filter(fileMatchesCodex);
+  const ignored = listed.files
+    .filter((file) => !(config.skipDisabled && file.disabled))
+    .filter((file) => !fileMatchesCodex(file))
+    .map((file) => ({
+      fileId: file.id,
+      status: "skipped",
+      statusCode: null,
+      latencyMs: 0,
+      checkedAt: new Date().toISOString(),
+      message: "非 Codex 认证文件，已跳过",
+      usage: null,
+      quotaBars: [],
+    }));
   const skipped = listed.files
     .filter((file) => config.skipDisabled && file.disabled)
     .map((file) => ({
@@ -207,10 +306,11 @@ async function checkInstance(instance, config) {
       checkedAt: new Date().toISOString(),
       message: "disabled 文件已跳过",
       usage: null,
+      quotaBars: [],
     }));
 
   const checks = await promisePool(targets, config.concurrency, (file) => checkAuthFile(instance, file, config));
-  const allChecks = [...checks, ...skipped];
+  const allChecks = [...checks, ...skipped, ...ignored];
 
   return {
     ...listed,
@@ -328,6 +428,15 @@ function normalizeAuthFile(item) {
   };
 }
 
+function fileMatchesCodex(file) {
+  const provider = String(file.provider || "").toLowerCase();
+  const fileId = String(file.id || "").toLowerCase();
+  const accountId = String(file.chatgptAccountId || "").toLowerCase();
+  const isGemini = provider.includes("gemini") || fileId.startsWith("gemini-") || fileId.includes("/gemini");
+  const isCodex = provider.includes("codex") || fileId.startsWith("codex-") || accountId.includes("chatgpt");
+  return isCodex && !isGemini;
+}
+
 function classifyStatus(statusCode, body) {
   if (statusCode === 401) return "invalid_401";
   if (statusCode === 403 || statusCode === 429) return "limited_or_forbidden";
@@ -400,6 +509,9 @@ function extractQuotaBars(body) {
 
   function inferLabel(keyPath, fallback) {
     const text = keyPath.join(".").toLowerCase();
+    if (text.includes("primary_window")) return "5 小时限额";
+    if (text.includes("secondary_window")) return "周限额";
+    if (text.includes("codex")) return "Codex 额度";
     if (text.includes("weekly") || text.includes("week")) return "周限额";
     if (text.includes("daily") || text.includes("day")) return "日限额";
     if (text.includes("hour") || text.includes("5h") || text.includes("five")) return "5 小时限额";
@@ -416,14 +528,25 @@ function extractQuotaBars(body) {
     }
 
     const label = String(node.label || node.name || node.title || inferLabel(keyPath, "额度"));
-    const resetAt = node.reset_at || node.resetAt || node.resets_at || node.resetsAt || node.next_reset_at || null;
+    const resetAt =
+      normalizeResetAt(
+        node.reset_at ??
+          node.resetAt ??
+          node.resets_at ??
+          node.resetsAt ??
+          node.next_reset_at ??
+          node.nextResetAt,
+      ) ||
+      inferResetAt(node) ||
+      null;
     const directPercent =
       node.percent ??
       node.percentage ??
       node.used_percent ??
       node.usedPercentage ??
       node.usage_percent ??
-      node.usagePercentage;
+      node.usagePercentage ??
+      normalizeRatio(node.used_ratio ?? node.usage_ratio);
 
     if (directPercent !== undefined) {
       addBar(label, Number(directPercent), resetAt);
@@ -446,6 +569,45 @@ function extractQuotaBars(body) {
 
   scan(parsed);
   return bars.slice(0, 8);
+}
+
+function inferResetAt(node) {
+  const seconds =
+    node.reset_after_seconds ??
+    node.resetAfterSeconds ??
+    node.resets_after_seconds ??
+    node.resetsAfterSeconds ??
+    node.reset_in_seconds ??
+    node.resetInSeconds;
+  const parsed = Number(seconds);
+  if (!Number.isFinite(parsed) || parsed < 0) return null;
+  return new Date(Date.now() + parsed * 1000).toISOString();
+}
+
+function normalizeResetAt(value) {
+  if (value === undefined || value === null || value === "") return null;
+  if (typeof value === "number") {
+    const milliseconds = value > 100000000000 ? value : value * 1000;
+    const date = new Date(milliseconds);
+    return Number.isNaN(date.getTime()) ? null : date.toISOString();
+  }
+
+  const text = String(value).trim();
+  if (/^\d+$/.test(text)) {
+    const number = Number(text);
+    const milliseconds = number > 100000000000 ? number : number * 1000;
+    const date = new Date(milliseconds);
+    return Number.isNaN(date.getTime()) ? text : date.toISOString();
+  }
+
+  const date = new Date(text);
+  return Number.isNaN(date.getTime()) ? text : date.toISOString();
+}
+
+function normalizeRatio(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return undefined;
+  return parsed <= 1 ? parsed * 100 : parsed;
 }
 
 async function promisePool(items, concurrency, worker) {
@@ -519,6 +681,38 @@ function summarizeInstances(instances) {
 function selectInstances(instances, instanceId) {
   if (!instanceId) return instances;
   return [findInstance(instances, instanceId)];
+}
+
+function mergeRequestInstances(baseInstances, rawInstances) {
+  const extra = parseRequestInstances(rawInstances);
+  const map = new Map(baseInstances.map((instance) => [instance.id, instance]));
+  for (const instance of extra) {
+    if (instance.enabled) map.set(instance.id, instance);
+  }
+  return [...map.values()];
+}
+
+function parseRequestInstances(rawInstances) {
+  if (!rawInstances) return [];
+  let parsed = rawInstances;
+  if (typeof rawInstances === "string") {
+    try {
+      parsed = JSON.parse(rawInstances);
+    } catch {
+      throw appError("BAD_INSTANCES_JSON", "端点配置不是有效 JSON", null, 400);
+    }
+  }
+  if (!Array.isArray(parsed)) return [];
+
+  return parsed
+    .map((item, index) => ({
+      id: String(item.id || `custom-${index + 1}`).trim(),
+      name: String(item.name || item.id || `Custom ${index + 1}`).trim(),
+      baseUrl: normalizeBaseUrl(item.baseUrl || item.base_url || ""),
+      accessKey: String(item.accessKey || item.access_key || "").trim(),
+      enabled: item.enabled !== false,
+    }))
+    .filter((instance) => instance.id && instance.baseUrl && instance.accessKey);
 }
 
 function findInstance(instances, instanceId) {

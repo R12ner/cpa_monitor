@@ -14,7 +14,7 @@
 - 不在浏览器暴露 CPA `access_key`，由 Worker 后端代请求 CPA 管理接口。
 - 支持监测单台或多台 CPA 服务器，便于复用到其他服务器。
 - 拉取认证文件列表，展示 provider、auth_index、disabled、账号 ID、检测状态。
-- 调用 CPA `api-call` 检测 ChatGPT usage 状态，识别 401 失效、2xx 正常、非 2xx 异常、网络错误。
+- 调用 CPA `api-call` 检测 Codex / ChatGPT usage 状态，识别 401 失效、2xx 正常、非 2xx 异常、网络错误。
 - 展示整体统计、异常列表、最近检测时间、延迟、失败原因。
 - 保留人工刷新能力，并预留 Cloudflare Cron 定时检测能力。
 
@@ -79,6 +79,7 @@ CPA_INSTANCE_ID=main
 CPA_INSTANCE_NAME=Main CPA
 CPA_BASE_URL=https://cpa.example.com
 CPA_ACCESS_KEY=replace-me
+ADMIN_PASSWORD=change-this-password
 MONITOR_TARGET_URL=https://chatgpt.com/backend-api/wham/usage
 CHECK_TIMEOUT_MS=30000
 CHECK_CONCURRENCY=8
@@ -97,9 +98,12 @@ Cloudflare 生产环境建议使用：
 
 ```bash
 wrangler pages secret put CPA_INSTANCES_JSON --project-name cpa-monitor
+wrangler pages secret put ADMIN_PASSWORD --project-name cpa-monitor
 ```
 
 `MONITOR_TARGET_URL`、`CHECK_TIMEOUT_MS`、`CHECK_CONCURRENCY`、`SKIP_DISABLED` 已在 `wrangler.toml` 中提供默认值，也可以在 Cloudflare Pages 的环境变量中覆盖。
+
+`ADMIN_PASSWORD` 是后台登录密码。设置后，前端需要先登录，所有数据 API 都会要求携带登录 token；不设置时默认不启用登录保护，便于本地调试。
 
 ## API
 
@@ -167,8 +171,7 @@ wrangler pages secret put CPA_INSTANCES_JSON --project-name cpa-monitor
 - 缓存 key：`cpa-monitor:snapshot:v2`
 - 筛选项 key：`cpa-monitor:filters:v2`
 - 页面刷新时优先使用本地缓存，10 分钟内不会自动重新请求 CPA。
-- 点击 `Refresh list` 会强制重新拉取认证文件列表。
-- 点击 `Check all` 会强制重新检测，并更新缓存。
+- 点击检测图标会强制检测 Codex 额度，并更新缓存。
 - 实例、状态、disabled、搜索、只看异常、额度展示模式会在页面刷新后保留。
 
 如果需要清空缓存，在浏览器控制台执行：
@@ -180,7 +183,7 @@ localStorage.removeItem("cpa-monitor:filters:v2")
 
 ## 额度进度条
 
-检测接口会从 usage 响应中尽量提取额度字段并返回 `quotaBars`。支持常见结构：
+检测接口会从 Codex usage 真实响应中提取额度字段并返回 `quotaBars`。支持常见结构：
 
 - `percent` / `percentage` / `used_percent`
 - `used` + `limit`
