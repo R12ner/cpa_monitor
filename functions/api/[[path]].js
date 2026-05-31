@@ -1,6 +1,7 @@
 const DEFAULT_TARGET_URL = "https://chatgpt.com/backend-api/wham/usage";
 const DEFAULT_TIMEOUT_MS = 30000;
 const DEFAULT_CONCURRENCY = 8;
+const DEFAULT_PUBLIC_CHECK_CACHE_SECONDS = 60;
 
 export async function onRequest(context) {
   const startedAt = Date.now();
@@ -49,6 +50,16 @@ export async function onRequest(context) {
       );
     }
 
+    if (route === "check-all" && method === "POST") {
+      const config = getRuntimeConfig(context.env);
+      const body = await readOptionalJson(context.request);
+      const isAuthed = await hasValidSession(context.request, context.env);
+      const data = isAuthed
+        ? await runCheckAll(config, body.instanceId || "", body.instances)
+        : await runPublicCheckAll(context.request, config, body.instanceId || "");
+      return ok(data, requestId, startedAt);
+    }
+
     await requireSession(context.request, context.env);
 
     if (route === "instances" && method === "GET") {
@@ -82,15 +93,6 @@ export async function onRequest(context) {
 
       const result = await checkAuthFile(instance, file, config);
       return ok({ instance: sanitizeInstance(instance), result }, requestId, startedAt);
-    }
-
-    if (route === "check-all" && method === "POST") {
-      const config = getRuntimeConfig(context.env);
-      const body = await readOptionalJson(context.request);
-      const allInstances = mergeRequestInstances(config.instances, body.instances);
-      const instances = selectInstances(allInstances, body.instanceId || "");
-      const checked = await Promise.all(instances.map((instance) => checkInstance(instance, config)));
-      return ok({ instances: checked, summary: summarizeInstances(checked) }, requestId, startedAt);
     }
 
     if (route === "snapshot" && method === "GET") {
@@ -127,6 +129,7 @@ function getRuntimeConfig(env) {
     timeoutMs: parsePositiveInt(env.CHECK_TIMEOUT_MS, DEFAULT_TIMEOUT_MS),
     concurrency: Math.min(parsePositiveInt(env.CHECK_CONCURRENCY, DEFAULT_CONCURRENCY), 20),
     skipDisabled: parseBool(env.SKIP_DISABLED, true),
+    publicCheckCacheSeconds: parsePositiveInt(env.PUBLIC_CHECK_CACHE_SECONDS, DEFAULT_PUBLIC_CHECK_CACHE_SECONDS),
   };
 }
 
@@ -138,11 +141,18 @@ async function requireSession(request, env) {
   const password = getAdminPassword(env);
   if (!password) return;
 
-  const header = request.headers.get("Authorization") || "";
-  const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
-  if (!token || !(await verifySessionToken(token, env))) {
+  if (!(await hasValidSession(request, env))) {
     throw appError("UNAUTHORIZED", "请先登录", null, 401);
   }
+}
+
+async function hasValidSession(request, env) {
+  const password = getAdminPassword(env);
+  if (!password) return true;
+
+  const header = request.headers.get("Authorization") || "";
+  const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+  return Boolean(token && (await verifySessionToken(token, env)));
 }
 
 async function createSessionToken(env) {
@@ -318,6 +328,70 @@ async function checkInstance(instance, config) {
     summary: summarizeFiles(listed.files, allChecks),
     checkedAt: new Date().toISOString(),
   };
+}
+
+async function runCheckAll(config, instanceId, requestInstances) {
+  const allInstances = mergeRequestInstances(config.instances, requestInstances);
+  const instances = selectInstances(allInstances, instanceId || "");
+  const checked = await Promise.all(instances.map((instance) => checkInstance(instance, config)));
+  return {
+    instances: checked,
+    summary: summarizeInstances(checked),
+    cached: false,
+    public: false,
+  };
+}
+
+async function runPublicCheckAll(request, config, instanceId) {
+  const cacheKey = new Request(buildPublicCheckCacheUrl(request, instanceId));
+  const cached = await readPublicCheckCache(cacheKey);
+  if (cached) return cached;
+
+  const instances = selectInstances(config.instances, instanceId || "");
+  const checked = await Promise.all(instances.map((instance) => checkInstance(instance, config)));
+  const data = {
+    instances: checked,
+    summary: summarizeInstances(checked),
+    cached: false,
+    public: true,
+    cacheSeconds: config.publicCheckCacheSeconds,
+  };
+  await writePublicCheckCache(cacheKey, data, config.publicCheckCacheSeconds);
+  return data;
+}
+
+function buildPublicCheckCacheUrl(request, instanceId) {
+  const url = new URL(request.url);
+  url.pathname = "/api/cache/public-check-all";
+  url.search = "";
+  url.searchParams.set("instance", instanceId || "all");
+  return url.toString();
+}
+
+async function readPublicCheckCache(cacheKey) {
+  if (typeof caches === "undefined" || !caches.default) return null;
+  const response = await caches.default.match(cacheKey);
+  if (!response) return null;
+  const data = await response.json().catch(() => null);
+  if (!data || typeof data !== "object") return null;
+  return {
+    ...data,
+    cached: true,
+    public: true,
+  };
+}
+
+async function writePublicCheckCache(cacheKey, data, seconds) {
+  if (typeof caches === "undefined" || !caches.default) return;
+  await caches.default.put(
+    cacheKey,
+    new Response(JSON.stringify(data), {
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": `public, max-age=${seconds}`,
+      },
+    }),
+  );
 }
 
 async function checkAuthFile(instance, file, config) {

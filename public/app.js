@@ -107,7 +107,7 @@ function bindEvents() {
   initLogin();
   renderEndpointList();
 
-  els.checkBtn?.addEventListener("click", () => withAdmin(checkAll));
+  els.checkBtn?.addEventListener("click", checkAll);
 
   for (const input of [els.instanceFilter, els.statusFilter, els.disabledFilter, els.searchInput, els.onlyProblems, els.quotaMode]) {
     input?.addEventListener("change", () => {
@@ -723,21 +723,27 @@ async function refreshList({ force }) {
 }
 
 async function checkAll() {
-  if (loginRequired && !sessionToken) {
-    openAdminLogin();
-    return;
-  }
-
   setBusy(true, "检测中");
   try {
     const instanceId = els.instanceFilter.value;
     log("check", instanceId ? `正在检测 ${targetLabel()} 实例 ${instanceId}` : `正在检测全部 ${targetLabel()} 实例`);
-    const data = await apiPost("/api/check-all", { instanceId, instances: readEndpoints() });
+    const body = { instanceId };
+    if (sessionToken) {
+      body.instances = readEndpoints();
+    } else if (readEndpoints().length > 0) {
+      log("warn", "未登录时不会发送浏览器本地端点，只检测 Cloudflare 环境变量中的 CPA");
+    }
+    const data = await apiPost("/api/check-all", body);
     ingestInstances(data.instances || [], true);
     state.summary = data.summary || summarizeRows(state.rows);
     state.lastCheckedAt = new Date().toISOString();
     saveSnapshot();
-    log("ok", `检测完成: 正常 ${state.summary.ok}, 401 ${state.summary.invalid401}, 错误 ${state.summary.errors}`);
+    log(
+      "ok",
+      data.cached
+        ? `已使用 ${data.cacheSeconds || 60} 秒内缓存: 正常 ${state.summary.ok}, 401 ${state.summary.invalid401}, 错误 ${state.summary.errors}`
+        : `检测完成: 正常 ${state.summary.ok}, 401 ${state.summary.invalid401}, 错误 ${state.summary.errors}`,
+    );
     render();
   } catch (error) {
     renderError(error);

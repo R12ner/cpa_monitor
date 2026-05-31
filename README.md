@@ -79,7 +79,13 @@ CPA_INSTANCES_JSON=[{"id":"main","name":"Main CPA","baseUrl":"https://api.omiku.
 ADMIN_PASSWORD=change-this-password
 ```
 
-`MONITOR_TARGET_URL`、`CHECK_TIMEOUT_MS`、`CHECK_CONCURRENCY`、`SKIP_DISABLED` 代码里有默认值，不配置也能运行。
+`MONITOR_TARGET_URL`、`CHECK_TIMEOUT_MS`、`CHECK_CONCURRENCY`、`SKIP_DISABLED`、`PUBLIC_CHECK_CACHE_SECONDS` 代码里有默认值，不配置也能运行。
+
+未登录用户也可以点击页面上的 Codex 额度检测按钮。公开检测只使用 Cloudflare 环境变量/secret 中配置的 CPA，不会发送浏览器本地添加的端点。公开检测默认有 60 秒缓存，短时间重复点击会直接返回缓存结果。需要调整时可配置：
+
+```bash
+PUBLIC_CHECK_CACHE_SECONDS=60
+```
 
 本地开发时手动创建 `.dev.vars`。这个文件已被 `.gitignore` 忽略，不会上传到 GitHub，也不会被 Cloudflare 创建页面扫描。推荐用分字段配置，最不容易被引号或换行影响：
 
@@ -103,16 +109,15 @@ CPA_INSTANCES_JSON=[{"id":"main","name":"Main CPA","baseUrl":"https://cpa.exampl
 
 如果想保留格式化 JSON，可以先把 JSON 做 base64，然后配置 `CPA_INSTANCES_JSON_B64`。
 
-Cloudflare 生产环境建议使用：
+Cloudflare：
 
-```bash
-wrangler pages secret put CPA_INSTANCES_JSON --project-name cpa-monitor
-wrangler pages secret put ADMIN_PASSWORD --project-name cpa-monitor
-```
-
-`MONITOR_TARGET_URL`、`CHECK_TIMEOUT_MS`、`CHECK_CONCURRENCY`、`SKIP_DISABLED` 有代码默认值，也可以在 Cloudflare Pages 的环境变量中覆盖。
-
-`ADMIN_PASSWORD` 是后台登录密码。设置后，前端需要先登录，所有数据 API 都会要求携带登录 token；不设置时默认不启用登录保护，便于本地调试。
+page部署
+加密变量：
+CPA_INSTANCE_ID=main
+CPA_INSTANCE_NAME=Main CPA
+CPA_BASE_URL=https://你的-cpa地址
+CPA_ACCESS_KEY=你的CPA管理密钥
+ADMIN_PASSWORD=你的后台密码
 
 ## API
 
