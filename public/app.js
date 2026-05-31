@@ -90,6 +90,7 @@ async function boot() {
   restoreSnapshot();
 
   try {
+    await loadSessionState();
     log("init", "加载 Worker 配置");
     await loadConfig();
     log("cache", state.rows.length ? "已加载公开缓存页面" : "暂无公开缓存，请登录后台后刷新数据");
@@ -173,7 +174,9 @@ function initLogin() {
   });
 }
 
-function openAdminLogin() {
+async function openAdminLogin() {
+  await loadSessionState();
+
   if (sessionToken && loginRequired) {
     logoutAdmin();
     return;
@@ -187,6 +190,16 @@ function openAdminLogin() {
   els.loginError.textContent = "";
   els.loginScreen.hidden = false;
   els.passwordInput.focus();
+}
+
+async function loadSessionState() {
+  try {
+    const session = await apiGet("/api/session", { skipAuth: true });
+    loginRequired = Boolean(session.loginRequired);
+    updateAdminState();
+  } catch (error) {
+    log("warn", `登录状态读取失败: ${error.message || "unknown"}`);
+  }
 }
 
 function logoutAdmin() {
@@ -661,12 +674,11 @@ function renderWindowDock() {
 }
 
 async function loadConfig() {
-  const [health, config, session] = await Promise.all([
+  const [health, config] = await Promise.all([
     apiGet("/api/health", { skipAuth: true }),
     apiGet("/api/config", { skipAuth: true }),
-    apiGet("/api/session", { skipAuth: true }),
   ]);
-  loginRequired = Boolean(config.loginRequired || session.loginRequired);
+  loginRequired = Boolean(config.loginRequired || loginRequired);
   updateAdminState();
   state.config = config;
   state.instances = mergeInstanceMeta(state.instances, config.instances || []);
