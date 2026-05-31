@@ -13,7 +13,6 @@ build/
 .dev.vars
 .env
 .env.*
-!.env.example
 
 # Logs
 *.log
@@ -42,4 +41,3 @@ Thumbs.db
 tmp/
 temp/
 *.tmp
-

@@ -81,7 +81,7 @@ ADMIN_PASSWORD=change-this-password
 
 `MONITOR_TARGET_URL`、`CHECK_TIMEOUT_MS`、`CHECK_CONCURRENCY`、`SKIP_DISABLED` 代码里有默认值，不配置也能运行。
 
-复制 `.env.example` 为 `.dev.vars` 用于 `wrangler pages dev` 本地开发。推荐用分字段配置，最不容易被引号或换行影响：
+本地开发时手动创建 `.dev.vars`。这个文件已被 `.gitignore` 忽略，不会上传到 GitHub，也不会被 Cloudflare 创建页面扫描。推荐用分字段配置，最不容易被引号或换行影响：
 
 ```bash
 CPA_INSTANCE_ID=main
