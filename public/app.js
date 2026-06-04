@@ -110,6 +110,8 @@ async function boot() {
     render();
   } catch (error) {
     renderError(error);
+  } finally {
+    finishSettingsBoot();
   }
 }
 
@@ -377,7 +379,7 @@ async function reloadGlobalSettings() {
   try {
     setSettingsSyncBusy(true);
     updateSettingsSyncStatus("正在从云端同步...");
-    const settings = await apiGet("/api/settings");
+    const settings = await apiGet("/api/settings", { timeoutMs: 2500 });
     state.globalSettings = settings || {};
     applyPrivacyFromSettings(state.globalSettings);
     state.settingsPersisted = Boolean(settings && settings.persisted);
@@ -496,6 +498,11 @@ function applyComponentSettings() {
   document.querySelectorAll("[data-component-toggle]").forEach((input) => {
     input.checked = settings[input.dataset.componentToggle] !== false;
   });
+}
+
+function finishSettingsBoot() {
+  applyComponentSettings();
+  document.body.classList.remove("settings-booting");
 }
 
 function readEndpoints() {
@@ -1445,8 +1452,14 @@ function statusTag(status) {
 }
 
 async function apiGet(path, options = {}) {
-  const response = await fetch(path, { headers: buildHeaders(options) });
-  return readApiResponse(response);
+  const controller = options.timeoutMs ? new AbortController() : null;
+  const timeout = controller ? setTimeout(() => controller.abort(), options.timeoutMs) : null;
+  try {
+    const response = await fetch(path, { headers: buildHeaders(options), signal: controller?.signal });
+    return readApiResponse(response);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
 }
 
 async function apiPost(path, body, options = {}) {

@@ -45,6 +45,10 @@ body {
   min-height: 100vh;
 }
 
+body.settings-booting .configurable-panel {
+  visibility: hidden;
+}
+
 body[data-theme="dark"] {
   --bg-deep: #151719;
   --bg-page: #1a1d20;
