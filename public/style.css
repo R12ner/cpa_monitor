@@ -1510,6 +1510,10 @@ td {
   font-weight: 600;
 }
 
+.mobile-row-summary {
+  display: none;
+}
+
 .tag {
   display: inline-flex;
   align-items: center;
@@ -1571,6 +1575,7 @@ td {
   .layout {
     grid-template-columns: 1fr;
     padding: 16px;
+    padding-top: 72px;
   }
 
   .metric-grid {
@@ -1590,33 +1595,391 @@ td {
     flex-direction: column;
   }
 
-  .theme-toggle {
-    top: 10px;
-    right: 10px;
-  }
 }
 
 @media (max-width: 640px) {
-  .metric-grid,
-  .filters {
+  body {
+    font-size: 12px;
+    line-height: 1.6;
+  }
+
+  .control-center {
+    top: 10px;
+    right: 10px;
+    gap: 6px;
+    padding: 6px;
+    border-radius: 16px;
+  }
+
+  .control-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    font-size: 18px;
+  }
+
+  .layout {
+    gap: 12px;
+    padding: 70px 10px 18px;
+  }
+
+  .sidebar,
+  .main {
+    gap: 12px;
+  }
+
+  .sidebar,
+  .metric-grid {
+    display: grid;
     grid-template-columns: 1fr;
+  }
+
+  .panel,
+  .metric-card {
+    border-radius: 12px;
+    backdrop-filter: blur(16px);
+  }
+
+  .title-bar {
+    min-height: 42px;
+    padding: 10px 12px;
+  }
+
+  .title-bar .title {
+    max-width: calc(100% - 92px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 11px;
+  }
+
+  .panel-body {
+    padding: 14px;
+  }
+
+  .brand {
+    gap: 10px;
+    padding-bottom: 12px;
+  }
+
+  .brand-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 9px;
+    font-size: 12px;
+  }
+
+  .nav-section {
+    margin-top: 10px;
+  }
+
+  .status-grid {
+    gap: 8px;
+  }
+
+  .terminal-note {
+    margin-top: 12px;
+    overflow-wrap: anywhere;
+  }
+
+  .metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .metric-card {
+    padding: 12px;
+  }
+
+  .metric-card strong {
+    font-size: 22px;
+  }
+
+  .hero-body {
+    min-height: auto;
   }
 
   .hero-body h2 {
     font-size: 22px;
+    line-height: 1.2;
   }
 
-  .action-row {
+  .hero-body p {
+    max-width: none;
+    font-size: 12px;
+  }
+
+  .quota-toolbar,
+  .table-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .quota-toolbar strong {
+    font-size: 18px;
+  }
+
+  .quota-actions,
+  .quota-actions select {
+    width: 100%;
+  }
+
+  .quota-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 42px;
+  }
+
+  .quota-actions .icon-btn {
+    width: 42px;
+  }
+
+  .quota-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .quota-card {
+    min-height: 0;
+    padding: 14px;
+    border-radius: 12px;
+  }
+
+  .quota-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .quota-head strong,
+  .quota-plan {
+    overflow-wrap: anywhere;
+  }
+
+  .filters {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .filters label,
+  .filters input[type="search"],
+  .filters select,
+  .toggle-line {
     width: 100%;
   }
 
   .btn {
-    flex: 1;
+    width: 100%;
+    min-height: 40px;
+    justify-content: center;
   }
 
-  .quota-actions,
-  .quota-actions .btn,
-  .quota-actions select {
+  .pagination-controls {
     width: 100%;
+    justify-content: space-between;
+  }
+
+  .pagination-controls label {
+    min-width: 92px;
+  }
+
+  .responsive-table {
+    overflow: visible;
+  }
+
+  table,
+  thead,
+  tbody,
+  tr,
+  th,
+  td {
+    display: block;
+  }
+
+  table {
+    min-width: 0;
+  }
+
+  thead {
+    display: none;
+  }
+
+  tbody {
+    display: grid;
+    gap: 10px;
+  }
+
+  tbody tr {
+    padding: 10px;
+    background: rgba(27, 36, 51, 0.04);
+    border: 1px solid rgba(27, 36, 51, 0.06);
+    border-radius: 12px;
+  }
+
+  body[data-theme="dark"] tbody tr {
+    background: rgba(0, 0, 0, 0.18);
+    border-color: rgba(0, 0, 0, 0.32);
+  }
+
+  td {
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 8px;
+    min-height: 30px;
+    padding: 7px 0;
+    border-bottom: 1px solid rgba(27, 36, 51, 0.05);
+    overflow-wrap: anywhere;
+  }
+
+  td[data-cell="instance"] {
+    display: block;
+    padding-top: 0;
+  }
+
+  td[data-cell="instance"]::before {
+    display: none;
+  }
+
+  .mobile-row-summary {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(27, 36, 51, 0.06);
+  }
+
+  body[data-theme="dark"] .mobile-row-summary {
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+  }
+
+  .mobile-row-head {
+    display: grid;
+    gap: 3px;
+  }
+
+  .mobile-row-head strong {
+    color: var(--text);
+    font-size: 12px;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  .mobile-row-provider {
+    color: var(--text-dim);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+  }
+
+  .mobile-row-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .mobile-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 22px;
+    padding: 2px 8px;
+    color: var(--text-dim);
+    background: rgba(27, 36, 51, 0.06);
+    border: 1px solid rgba(27, 36, 51, 0.07);
+    border-radius: 999px;
+    font-size: 10px;
+    white-space: nowrap;
+  }
+
+  body[data-theme="dark"] .mobile-chip {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  td:last-child {
+    border-bottom: 0;
+  }
+
+  td::before {
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+
+  td:nth-child(1)::before { content: "实例"; }
+  td:nth-child(2)::before { content: "文件"; }
+  td:nth-child(3)::before { content: "供应商"; }
+  td:nth-child(4)::before { content: "索引"; }
+  td:nth-child(5)::before { content: "禁用"; }
+  td:nth-child(6)::before { content: "账号"; }
+  td:nth-child(7)::before { content: "状态"; }
+  td:nth-child(8)::before { content: "HTTP"; }
+  td:nth-child(9)::before { content: "延迟"; }
+  td:nth-child(10)::before { content: "消息"; }
+
+  td.empty {
+    display: block;
+    padding: 18px;
+    text-align: center;
+  }
+
+  td.empty::before {
+    content: "";
+  }
+
+  .log-output {
+    max-height: 260px;
+  }
+
+  .settings-drawer {
+    width: 100vw;
+    max-width: none;
+  }
+
+  .settings-head {
+    padding: 20px 16px;
+  }
+
+  .settings-group {
+    padding: 18px 16px;
+  }
+
+  .login-card {
+    width: calc(100vw - 24px);
+  }
+
+  .login-head {
+    padding: 20px 18px 12px;
+  }
+
+  .login-body {
+    padding: 18px;
+  }
+
+  .window-panel.maximized {
+    inset: 8px;
+    border-radius: 12px;
+  }
+
+  .window-panel.maximized .panel-body {
+    padding: 14px;
+  }
+
+  body.has-maximized-window::after {
+    backdrop-filter: none;
+  }
+
+  .window-dock {
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    max-width: none;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+
+  .window-dock button {
+    flex: 0 0 auto;
   }
 }

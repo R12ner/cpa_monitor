@@ -103,6 +103,7 @@ async function boot() {
 function bindEvents() {
   initTheme();
   initWindowManager();
+  initResponsiveWindows();
   initSettings();
   initLogin();
   renderEndpointList();
@@ -134,6 +135,17 @@ function bindEvents() {
   });
 
   document.querySelectorAll("[data-target-kind]").forEach((button) => button.classList.add("active"));
+}
+
+function initResponsiveWindows() {
+  const sync = () => {
+    const compact = window.matchMedia("(max-width: 760px), (pointer: coarse)").matches;
+    document.querySelectorAll(".window-panel").forEach((panel) => {
+      panel.draggable = !compact;
+    });
+  };
+  sync();
+  window.addEventListener("resize", sync, { passive: true });
 }
 
 function initTheme() {
@@ -985,20 +997,38 @@ function renderTable(rows) {
       const file = row.file;
       const check = row.check;
       const status = check ? check.status : "unchecked";
+      const mobileSummary = renderMobileRowSummary(row, status);
       return `<tr>
-        <td class="mono-strong">${escapeHtml(row.instance.name)}</td>
-        <td title="${escapeHtml(file.id)}">${escapeHtml(shorten(file.id, 26))}</td>
-        <td>${escapeHtml(file.provider)}</td>
-        <td>${escapeHtml(String(file.authIndex))}</td>
-        <td>${file.disabled ? '<span class="tag warn">true</span>' : '<span class="tag neutral">false</span>'}</td>
-        <td title="${escapeHtml(file.chatgptAccountId)}">${escapeHtml(shorten(file.chatgptAccountId || "-", 24))}</td>
-        <td>${statusTag(status)}</td>
-        <td>${check && check.statusCode ? check.statusCode : "-"}</td>
-        <td>${check ? `${check.latencyMs}ms` : "-"}</td>
-        <td title="${escapeHtml(check ? check.message || "" : "")}">${escapeHtml(shorten(check ? check.message || "" : "未检测", 48))}</td>
+        <td class="mono-strong" data-cell="instance">${mobileSummary}${escapeHtml(row.instance.name)}</td>
+        <td data-cell="file" title="${escapeHtml(file.id)}">${escapeHtml(shorten(file.id, 26))}</td>
+        <td data-cell="provider">${escapeHtml(file.provider)}</td>
+        <td data-cell="auth-index">${escapeHtml(String(file.authIndex))}</td>
+        <td data-cell="disabled">${file.disabled ? '<span class="tag warn">true</span>' : '<span class="tag neutral">false</span>'}</td>
+        <td data-cell="account" title="${escapeHtml(file.chatgptAccountId)}">${escapeHtml(shorten(file.chatgptAccountId || "-", 24))}</td>
+        <td data-cell="status">${statusTag(status)}</td>
+        <td data-cell="http">${check && check.statusCode ? check.statusCode : "-"}</td>
+        <td data-cell="latency">${check ? `${check.latencyMs}ms` : "-"}</td>
+        <td data-cell="message" title="${escapeHtml(check ? check.message || "" : "")}">${escapeHtml(shorten(check ? check.message || "" : "未检测", 48))}</td>
       </tr>`;
     })
     .join("");
+}
+
+function renderMobileRowSummary(row, status) {
+  if (row.instanceError || !row.file) return "";
+  const http = row.check && row.check.statusCode ? row.check.statusCode : "-";
+  const latency = row.check ? `${row.check.latencyMs}ms` : "-";
+  return `<div class="mobile-row-summary" aria-hidden="true">
+    <div class="mobile-row-head">
+      <strong>${escapeHtml(shorten(row.file.id, 28))}</strong>
+      <span class="mobile-row-provider">${escapeHtml(row.file.provider || "-")}</span>
+    </div>
+    <div class="mobile-row-meta">
+      ${statusTag(status)}
+      <span class="mobile-chip">HTTP ${escapeHtml(String(http))}</span>
+      <span class="mobile-chip">${escapeHtml(latency)}</span>
+    </div>
+  </div>`;
 }
 
 function getFilteredRows() {
