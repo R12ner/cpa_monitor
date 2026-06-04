@@ -205,3 +205,16 @@ localStorage.removeItem("cpa-monitor:filters:v2")
 - `reset_at` / `resetAt` / `resets_at`
 
 如果 CPA 或 ChatGPT usage 返回体中没有明确额度字段，页面会显示检测状态，但不会强造进度条。
+
+## 跨浏览器持久化后台设置
+
+后台里的显示组件、窗口顺序、最小化状态、后台添加的 CPA 端点默认会先保存在浏览器本地。要让不同浏览器、不同设备登录后台后看到同一套设置，需要在 Cloudflare 绑定 KV。
+
+Cloudflare Pages 网页端操作：
+
+1. 进入 `Workers & Pages -> KV`，创建一个 KV namespace，例如 `cpa-monitor-settings`。
+2. 进入当前 Pages 项目：`Settings -> Functions -> KV namespace bindings`。
+3. 添加绑定，变量名必须填写 `CPA_MONITOR_KV`，选择刚创建的 KV namespace。
+4. 保存后重新部署一次 Pages。
+
+绑定后，管理员在设置里修改显示组件、窗口状态或端点配置，会保存到 KV。未登录用户只能读取公开显示设置，不会拿到端点密钥；端点密钥只会在管理员登录后通过 `/api/settings` 返回。

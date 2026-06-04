@@ -5,6 +5,7 @@ const THEME_KEY = "cpa-monitor:theme:v1";
 const SESSION_KEY = "cpa-monitor:session:v1";
 const COMPONENT_KEY = "cpa-monitor:components:v1";
 const ENDPOINT_KEY = "cpa-monitor:endpoints:v1";
+const GLOBAL_SETTINGS_FALLBACK_KEY = "cpa-monitor:global-settings-fallback:v1";
 const CACHE_TTL_MS = 10 * 60 * 1000;
 
 const WINDOW_TITLES = {
@@ -22,6 +23,8 @@ const state = {
   summary: emptySummary(),
   lastCheckedAt: null,
   loadedFromCache: false,
+  globalSettings: {},
+  settingsPersisted: false,
 };
 
 const els = {
@@ -91,6 +94,10 @@ async function boot() {
 
   try {
     await loadSessionState();
+    await loadGlobalSettings();
+    applyComponentSettings();
+    restoreWindowState();
+    renderWindowDock();
     log("init", "加载 Worker 配置");
     await loadConfig();
     log("cache", state.rows.length ? "已加载公开缓存页面" : "暂无公开缓存，请登录后台后刷新数据");
@@ -178,6 +185,10 @@ function initLogin() {
       els.loginScreen.hidden = true;
       els.passwordInput.value = "";
       updateAdminState();
+      await loadGlobalSettings();
+      applyComponentSettings();
+      restoreWindowState();
+      renderWindowDock();
       await loadConfig();
       await refreshList({ force: false });
     } catch (error) {
@@ -211,6 +222,63 @@ async function loadSessionState() {
     updateAdminState();
   } catch (error) {
     log("warn", `登录状态读取失败: ${error.message || "unknown"}`);
+  }
+}
+
+async function loadGlobalSettings() {
+  const fallback = readLocalGlobalSettings();
+  if (fallback && Object.keys(fallback).length > 0) {
+    state.globalSettings = fallback;
+  }
+
+  try {
+    const settings = await apiGet("/api/settings");
+    state.globalSettings = settings || {};
+    state.settingsPersisted = Boolean(settings && settings.persisted);
+    localStorage.setItem(GLOBAL_SETTINGS_FALLBACK_KEY, JSON.stringify(state.globalSettings));
+  } catch (error) {
+    log("warn", `全局设置读取失败，已使用本地设置: ${error.message || "unknown"}`);
+  }
+}
+
+function readLocalGlobalSettings() {
+  try {
+    return JSON.parse(localStorage.getItem(GLOBAL_SETTINGS_FALLBACK_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function collectGlobalSettings() {
+  return {
+    components: readComponentSettings(),
+    windows: readWindowState(),
+    endpoints: readEndpoints(),
+  };
+}
+
+async function saveGlobalSettings() {
+  state.globalSettings = collectGlobalSettings();
+  localStorage.setItem(GLOBAL_SETTINGS_FALLBACK_KEY, JSON.stringify(state.globalSettings));
+
+  if (loginRequired && !sessionToken) return;
+
+  try {
+    const saved = await apiPost("/api/settings", state.globalSettings);
+    state.settingsPersisted = Boolean(saved && saved.persisted);
+    if (saved) {
+      state.globalSettings = {
+        components: saved.components || state.globalSettings.components,
+        windows: saved.windows || state.globalSettings.windows,
+        endpoints: saved.endpoints || state.globalSettings.endpoints,
+      };
+      localStorage.setItem(GLOBAL_SETTINGS_FALLBACK_KEY, JSON.stringify(state.globalSettings));
+    }
+    if (!state.settingsPersisted) {
+      log("warn", "全局设置未绑定 KV，当前只能保存在本地浏览器");
+    }
+  } catch (error) {
+    log("warn", `全局设置保存失败: ${error.message || "unknown"}`);
   }
 }
 
@@ -253,6 +321,8 @@ function initSettings() {
       const settings = readComponentSettings();
       settings[input.dataset.componentToggle] = input.checked;
       localStorage.setItem(COMPONENT_KEY, JSON.stringify(settings));
+      state.globalSettings.components = settings;
+      saveGlobalSettings();
       applyComponentSettings();
     });
   });
@@ -274,6 +344,9 @@ function readComponentSettings() {
     metrics: true,
     hero: true,
   };
+  if (state.globalSettings?.components) {
+    return { ...defaults, ...state.globalSettings.components };
+  }
   try {
     return { ...defaults, ...JSON.parse(localStorage.getItem(COMPONENT_KEY) || "{}") };
   } catch {
@@ -292,6 +365,9 @@ function applyComponentSettings() {
 }
 
 function readEndpoints() {
+  if (Array.isArray(state.globalSettings?.endpoints)) {
+    return state.globalSettings.endpoints.filter((item) => item && item.baseUrl && item.accessKey);
+  }
   try {
     return JSON.parse(localStorage.getItem(ENDPOINT_KEY) || "[]").filter((item) => item && item.baseUrl && item.accessKey);
   } catch {
@@ -301,6 +377,8 @@ function readEndpoints() {
 
 function saveEndpoints(endpoints) {
   localStorage.setItem(ENDPOINT_KEY, JSON.stringify(endpoints));
+  state.globalSettings.endpoints = endpoints;
+  saveGlobalSettings();
   renderEndpointList();
 }
 
@@ -664,11 +742,9 @@ function animateRectElementTo(element, fromRect, toRect, options = {}) {
 }
 
 function restoreWindowState() {
-  const raw = localStorage.getItem(WINDOW_KEY);
-  if (!raw) return;
-
   try {
-    const saved = JSON.parse(raw);
+    const saved = state.globalSettings?.windows || JSON.parse(localStorage.getItem(WINDOW_KEY) || "null");
+    if (!saved) return;
     const main = document.querySelector(".main");
     for (const id of saved.order || []) {
       const panel = document.querySelector(`.window-panel[data-window="${cssEscape(id)}"]`);
@@ -686,7 +762,7 @@ function restoreWindowState() {
   }
 }
 
-function persistWindowState(options = {}) {
+function readWindowState(options = {}) {
   const persistClosed = options.persistClosed !== false;
   const panels = [...document.querySelectorAll(".window-panel")];
   const views = {};
@@ -699,13 +775,17 @@ function persistWindowState(options = {}) {
     };
   }
 
-  localStorage.setItem(
-    WINDOW_KEY,
-    JSON.stringify({
-      order: panels.map((panel) => panel.dataset.window),
-      views,
-    }),
-  );
+  return {
+    order: panels.map((panel) => panel.dataset.window),
+    views,
+  };
+}
+
+function persistWindowState(options = {}) {
+  const windowState = readWindowState(options);
+  localStorage.setItem(WINDOW_KEY, JSON.stringify(windowState));
+  state.globalSettings.windows = windowState;
+  saveGlobalSettings();
 }
 
 function renderWindowDock() {

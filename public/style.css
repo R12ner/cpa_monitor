@@ -2,6 +2,12 @@
   box-sizing: border-box;
 }
 
+html {
+  overflow-x: hidden;
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
 :root {
   --bg-deep: #e9e1d4;
   --bg-page: #f4eee3;
@@ -27,6 +33,7 @@
 
 body {
   margin: 0;
+  overflow-x: hidden;
   background:
     radial-gradient(circle at top left, rgba(84, 184, 255, 0.24), transparent 28%),
     radial-gradient(circle at top right, rgba(122, 124, 255, 0.16), transparent 24%),
@@ -1463,10 +1470,12 @@ body[data-theme="dark"].window-animating.has-maximized-window::after {
 .responsive-table {
   overflow-x: auto;
   background: transparent;
+  max-width: 100%;
 }
 
 table {
   width: 100%;
+  max-width: 100%;
   border-collapse: collapse;
   min-width: 1080px;
   background: transparent;
@@ -1491,10 +1500,14 @@ tr:active {
 
 th,
 td {
+  min-width: 0;
+  max-width: 100%;
   padding: 10px 9px;
   border-bottom: 1px solid rgba(27, 36, 51, 0.06);
   text-align: left;
   vertical-align: top;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 th {
@@ -1937,6 +1950,8 @@ td {
 
   .responsive-table {
     overflow: visible;
+    width: 100%;
+    max-width: 100%;
   }
 
   table,
@@ -1949,6 +1964,8 @@ td {
   }
 
   table {
+    width: 100%;
+    max-width: 100%;
     min-width: 0;
   }
 
@@ -1959,13 +1976,20 @@ td {
   tbody {
     display: grid;
     gap: 12px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
   }
 
   tbody tr {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     padding: 16px;
     background: rgba(27, 36, 51, 0.04);
     border: 1px solid rgba(27, 36, 51, 0.06);
     border-radius: 18px;
+    overflow: hidden;
   }
 
   body[data-theme="dark"] tbody tr {
@@ -1977,11 +2001,26 @@ td {
     display: grid;
     grid-template-columns: 92px minmax(0, 1fr);
     gap: 12px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     min-height: 38px;
     padding: 10px 0;
     border-bottom: 1px solid rgba(27, 36, 51, 0.05);
-    font-size: 14px;
+    font-size: 15px;
     overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  td > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  td[colspan] {
+    display: block;
+    width: 100%;
+    max-width: 100%;
   }
 
   td[data-cell="instance"] {
@@ -2012,14 +2051,15 @@ td {
 
   .mobile-row-head strong {
     color: var(--text);
-    font-size: 16px;
+    font-size: 17px;
     line-height: 1.35;
     overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   .mobile-row-provider {
     color: var(--text-dim);
-    font-size: 13px;
+    font-size: 14px;
     text-transform: uppercase;
     letter-spacing: 0.6px;
   }
@@ -2029,6 +2069,7 @@ td {
     flex-wrap: wrap;
     gap: 6px;
     align-items: center;
+    min-width: 0;
   }
 
   .mobile-chip {
@@ -2040,8 +2081,26 @@ td {
     background: rgba(27, 36, 51, 0.06);
     border: 1px solid rgba(27, 36, 51, 0.07);
     border-radius: 999px;
-    font-size: 13px;
-    white-space: nowrap;
+    font-size: 14px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .tag {
+    max-width: 100%;
+    min-height: 28px;
+    padding: 4px 10px;
+    font-size: 14px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .mono-strong,
+  td[data-cell="file"],
+  td[data-cell="account"],
+  td[data-cell="message"] {
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   body[data-theme="dark"] .mobile-chip {

@@ -1,3 +1,12 @@
 name = "cpa-monitor"
 compatibility_date = "2026-05-03"
 pages_build_output_dir = "public"
+
+# Optional: bind a KV namespace to persist admin settings across browsers.
+# In Cloudflare Pages dashboard, create a KV namespace and bind it as:
+# CPA_MONITOR_KV
+#
+# For Wrangler deploys, uncomment and fill the id:
+# [[kv_namespaces]]
+# binding = "CPA_MONITOR_KV"
+# id = "replace-with-kv-namespace-id"

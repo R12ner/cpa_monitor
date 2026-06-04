@@ -2,6 +2,7 @@ const DEFAULT_TARGET_URL = "https://chatgpt.com/backend-api/wham/usage";
 const DEFAULT_TIMEOUT_MS = 30000;
 const DEFAULT_CONCURRENCY = 8;
 const DEFAULT_PUBLIC_CHECK_CACHE_SECONDS = 60;
+const SETTINGS_KEY = "global-settings:v1";
 
 export async function onRequest(context) {
   const startedAt = Date.now();
@@ -48,6 +49,27 @@ export async function onRequest(context) {
         requestId,
         startedAt,
       );
+    }
+
+    if (route === "settings" && method === "GET") {
+      const isAuthed = await hasValidSession(context.request, context.env);
+      const settings = await readGlobalSettings(context.env);
+      return ok(
+        {
+          ...sanitizeSettings(settings, { includePrivate: isAuthed }),
+          persisted: Boolean(getSettingsStore(context.env)),
+        },
+        requestId,
+        startedAt,
+      );
+    }
+
+    if (route === "settings" && method === "POST") {
+      await requireSession(context.request, context.env);
+      const body = await readJson(context.request);
+      const settings = sanitizeSettings(body || {}, { includePrivate: true });
+      const persisted = await writeGlobalSettings(context.env, settings);
+      return ok({ ...settings, persisted }, requestId, startedAt);
     }
 
     if (route === "check-all" && method === "POST") {
@@ -135,6 +157,73 @@ function getRuntimeConfig(env) {
 
 function getAdminPassword(env) {
   return String(env.ADMIN_PASSWORD || env.CPA_MONITOR_PASSWORD || "").trim();
+}
+
+function getSettingsStore(env) {
+  return env.CPA_MONITOR_KV || env.CPA_MONITOR_SETTINGS || env.SETTINGS_KV || null;
+}
+
+async function readGlobalSettings(env) {
+  const store = getSettingsStore(env);
+  if (!store || typeof store.get !== "function") return {};
+  const raw = await store.get(SETTINGS_KEY);
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}
+
+async function writeGlobalSettings(env, settings) {
+  const store = getSettingsStore(env);
+  if (!store || typeof store.put !== "function") return false;
+  await store.put(SETTINGS_KEY, JSON.stringify(settings));
+  return true;
+}
+
+function sanitizeSettings(raw, options = {}) {
+  const includePrivate = Boolean(options.includePrivate);
+  const settings = {};
+
+  if (raw && raw.components && typeof raw.components === "object") {
+    settings.components = {};
+    for (const key of ["quota", "filters", "auth-files", "logs", "metrics", "hero"]) {
+      if (typeof raw.components[key] === "boolean") settings.components[key] = raw.components[key];
+    }
+  }
+
+  if (raw && raw.windows && typeof raw.windows === "object") {
+    settings.windows = {};
+    if (Array.isArray(raw.windows.order)) {
+      settings.windows.order = raw.windows.order.map((item) => String(item)).filter(Boolean).slice(0, 20);
+    }
+    if (raw.windows.views && typeof raw.windows.views === "object") {
+      settings.windows.views = {};
+      for (const [id, view] of Object.entries(raw.windows.views)) {
+        if (!view || typeof view !== "object") continue;
+        settings.windows.views[String(id)] = {
+          minimized: Boolean(view.minimized),
+          closed: Boolean(view.closed),
+        };
+      }
+    }
+  }
+
+  if (includePrivate && Array.isArray(raw.endpoints)) {
+    settings.endpoints = raw.endpoints
+      .map((item) => ({
+        id: String(item.id || "").trim().slice(0, 80),
+        name: String(item.name || item.id || "").trim().slice(0, 120),
+        baseUrl: normalizeBaseUrl(item.baseUrl || item.base_url || ""),
+        accessKey: String(item.accessKey || item.access_key || "").trim(),
+        enabled: item.enabled !== false,
+      }))
+      .filter((item) => item.id && item.baseUrl && item.accessKey)
+      .slice(0, 50);
+  }
+
+  return settings;
 }
 
 async function requireSession(request, env) {
