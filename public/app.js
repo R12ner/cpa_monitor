@@ -182,7 +182,7 @@ function setTheme(theme) {
 }
 
 function initPrivacyMode() {
-  setPrivacyMode(localStorage.getItem(PRIVACY_KEY) === "true", { renderNow: false });
+  setPrivacyMode(localStorage.getItem(PRIVACY_KEY) === "true", { renderNow: false, save: false });
   els.privacyToggle?.addEventListener("change", () => {
     setPrivacyMode(Boolean(els.privacyToggle.checked));
   });
@@ -191,6 +191,7 @@ function initPrivacyMode() {
 function setPrivacyMode(enabled, options = {}) {
   state.privacyMode = Boolean(enabled);
   localStorage.setItem(PRIVACY_KEY, state.privacyMode ? "true" : "false");
+  state.globalSettings.privacyMode = state.privacyMode;
   document.body.classList.toggle("privacy-mode", state.privacyMode);
   if (els.privacyToggle) {
     els.privacyToggle.checked = state.privacyMode;
@@ -200,6 +201,7 @@ function setPrivacyMode(enabled, options = {}) {
     const icon = els.privacyToggle.querySelector("i");
     if (icon) icon.className = state.privacyMode ? "ph-bold ph-eye" : "ph-bold ph-eye-slash";
   }
+  if (options.save !== false) saveGlobalSettings();
   if (options.renderNow !== false) render();
 }
 
@@ -272,7 +274,8 @@ async function loadGlobalSettings() {
       return;
     }
 
-    state.globalSettings = remoteHasSettings ? remoteSettings : { ...fallback, ...remoteSettings };
+    state.globalSettings = { ...fallback, ...remoteSettings };
+    applyPrivacyFromSettings(state.globalSettings);
     state.settingsPersisted = Boolean(settings && settings.persisted);
     localStorage.setItem(GLOBAL_SETTINGS_FALLBACK_KEY, JSON.stringify(state.globalSettings));
     updateSettingsSyncStatus(
@@ -289,7 +292,8 @@ function hasStoredGlobalSettings(settings) {
     settings &&
       ((settings.components && Object.keys(settings.components).length > 0) ||
         (settings.windows && Object.keys(settings.windows).length > 0) ||
-        (Array.isArray(settings.endpoints) && settings.endpoints.length > 0)),
+        (Array.isArray(settings.endpoints) && settings.endpoints.length > 0) ||
+        typeof settings.privacyMode === "boolean"),
   );
 }
 
@@ -315,6 +319,9 @@ function readLocalGlobalSettings() {
   } catch {
     // Ignore invalid legacy endpoint settings.
   }
+  if (typeof settings.privacyMode !== "boolean" && localStorage.getItem(PRIVACY_KEY) !== null) {
+    settings.privacyMode = localStorage.getItem(PRIVACY_KEY) === "true";
+  }
   if (!settings.components) delete settings.components;
   if (!settings.windows) delete settings.windows;
   if (!settings.endpoints) delete settings.endpoints;
@@ -326,6 +333,7 @@ function collectGlobalSettings() {
     components: readComponentSettings(),
     windows: readWindowState(),
     endpoints: readEndpoints(),
+    privacyMode: state.privacyMode,
   };
 }
 
@@ -371,6 +379,7 @@ async function reloadGlobalSettings() {
     updateSettingsSyncStatus("正在从云端同步...");
     const settings = await apiGet("/api/settings");
     state.globalSettings = settings || {};
+    applyPrivacyFromSettings(state.globalSettings);
     state.settingsPersisted = Boolean(settings && settings.persisted);
     localStorage.setItem(GLOBAL_SETTINGS_FALLBACK_KEY, JSON.stringify(state.globalSettings));
     restoreWindowState();
@@ -386,6 +395,12 @@ async function reloadGlobalSettings() {
     updateSettingsSyncStatus(`同步失败: ${error.message || "unknown"}`);
   } finally {
     setSettingsSyncBusy(false);
+  }
+}
+
+function applyPrivacyFromSettings(settings) {
+  if (settings && typeof settings.privacyMode === "boolean") {
+    setPrivacyMode(settings.privacyMode, { renderNow: false, save: false });
   }
 }
 

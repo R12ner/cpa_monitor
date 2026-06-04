@@ -188,6 +188,10 @@ function sanitizeSettings(raw, options = {}) {
   const includePrivate = Boolean(options.includePrivate);
   const settings = {};
 
+  if (raw && typeof raw.privacyMode === "boolean") {
+    settings.privacyMode = raw.privacyMode;
+  }
+
   if (raw && raw.components && typeof raw.components === "object") {
     settings.components = {};
     for (const key of ["quota", "filters", "auth-files", "logs", "metrics", "hero"]) {
