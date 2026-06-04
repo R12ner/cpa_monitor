@@ -98,8 +98,8 @@ async function boot() {
   try {
     await loadSessionState();
     await loadGlobalSettings();
-    applyComponentSettings();
     restoreWindowState();
+    applyComponentSettings();
     renderWindowDock();
     log("init", "加载 Worker 配置");
     await loadConfig();
@@ -189,8 +189,8 @@ function initLogin() {
       els.passwordInput.value = "";
       updateAdminState();
       await loadGlobalSettings();
-      applyComponentSettings();
       restoreWindowState();
+      applyComponentSettings();
       renderWindowDock();
       await loadConfig();
       await refreshList({ force: false });
@@ -347,8 +347,8 @@ async function reloadGlobalSettings() {
     state.globalSettings = settings || {};
     state.settingsPersisted = Boolean(settings && settings.persisted);
     localStorage.setItem(GLOBAL_SETTINGS_FALLBACK_KEY, JSON.stringify(state.globalSettings));
-    applyComponentSettings();
     restoreWindowState();
+    applyComponentSettings();
     renderWindowDock();
     renderEndpointList();
     render();
@@ -848,11 +848,17 @@ function restoreWindowState() {
       const panel = document.querySelector(`.window-panel[data-window="${cssEscape(id)}"]`);
       if (!panel) continue;
       panel.dataset.minimized = view.minimized ? "true" : "false";
-      panel.hidden = Boolean(view.minimized);
+      panel.hidden = Boolean(view.minimized) || isPanelComponentDisabled(panel);
     }
   } catch {
     localStorage.removeItem(WINDOW_KEY);
   }
+}
+
+function isPanelComponentDisabled(panel) {
+  const component = panel?.dataset?.component;
+  if (!component) return false;
+  return readComponentSettings()[component] === false;
 }
 
 function readWindowState(options = {}) {
