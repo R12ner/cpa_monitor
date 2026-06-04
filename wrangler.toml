@@ -2,11 +2,13 @@ name = "cpa-monitor"
 compatibility_date = "2026-05-03"
 pages_build_output_dir = "public"
 
-# Optional: bind a KV namespace to persist admin settings across browsers.
-# In Cloudflare Pages dashboard, create a KV namespace and bind it as:
-# CPA_MONITOR_KV
+# 可选：绑定 KV 后，后台显示设置/窗口状态/端点配置会跨浏览器持久化。
+# 你的 Cloudflare Pages 页面提示“绑定通过 wrangler.toml 管理”时，网页端不能添加绑定，这是正常的。
+# 创建 KV 后运行：
+# npm run kv:bind -- <KV_NAMESPACE_ID>
+# 然后提交 wrangler.toml 到 GitHub，Cloudflare 会在下一次部署时应用绑定。
 #
-# For Wrangler deploys, uncomment and fill the id:
+# 最终会生成类似下面的配置：
 # [[kv_namespaces]]
-# binding = "CPA_MONITOR_KV"
-# id = "replace-with-kv-namespace-id"
+binding = "CPA_MONITOR_KV"
+id = "aa9c01241a064e73b0c8598def17b73f"

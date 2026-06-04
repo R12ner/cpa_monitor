@@ -212,9 +212,19 @@ localStorage.removeItem("cpa-monitor:filters:v2")
 
 Cloudflare Pages 网页端操作：
 
+如果 Pages 项目提示“此项目的绑定通过 wrangler.toml 进行管理”，网页端的添加按钮会被锁住。这时不要在网页端绑定，按下面流程走 Git 配置：
+
 1. 进入 `Workers & Pages -> KV`，创建一个 KV namespace，例如 `cpa-monitor-settings`。
-2. 进入当前 Pages 项目：`Settings -> Functions -> KV namespace bindings`。
-3. 添加绑定，变量名必须填写 `CPA_MONITOR_KV`，选择刚创建的 KV namespace。
-4. 保存后重新部署一次 Pages。
+2. 打开这个 KV namespace，复制它的 Namespace ID。
+3. 在本地项目运行：`npm run kv:bind -- <KV_NAMESPACE_ID>`。
+4. 提交并推送更新后的 `wrangler.toml` 到 GitHub。
+5. Cloudflare Pages 重新部署后会自动应用 `CPA_MONITOR_KV` 绑定。
+
+也可以用 Wrangler 创建 KV：
+
+```bash
+npm run kv:create
+npm run kv:bind -- <上一步输出的 id>
+```
 
 绑定后，管理员在设置里修改显示组件、窗口状态或端点配置，会保存到 KV。未登录用户只能读取公开显示设置，不会拿到端点密钥；端点密钥只会在管理员登录后通过 `/api/settings` 返回。
