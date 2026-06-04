@@ -496,6 +496,44 @@ body[data-theme="dark"] .settings-body::-webkit-scrollbar-thumb {
   margin-bottom: 16px;
 }
 
+.settings-sync {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 14px;
+  background: rgba(27, 36, 51, 0.04);
+  border: 1px solid rgba(22, 119, 255, 0.1);
+  border-radius: 14px;
+}
+
+.settings-sync strong,
+.settings-sync span {
+  display: block;
+}
+
+.settings-sync strong {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.settings-sync span {
+  margin-top: 3px;
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+.settings-sync-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.settings-sync-actions .btn {
+  min-height: 36px;
+  padding: 7px 10px;
+  font-size: 12px;
+}
+
 .switch-item {
   display: flex;
   align-items: center;
@@ -2160,6 +2198,10 @@ td {
 
   .settings-group {
     padding: 20px 18px;
+  }
+
+  .settings-sync-actions {
+    grid-template-columns: 1fr;
   }
 
   .login-card {

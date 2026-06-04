@@ -58,6 +58,16 @@
     <div class="settings-body">
       <div class="settings-group">
         <div class="group-label">显示组件</div>
+        <div class="settings-sync">
+          <div>
+            <strong id="settingsSyncTitle">云端设置</strong>
+            <span id="settingsSyncStatus">等待同步状态</span>
+          </div>
+          <div class="settings-sync-actions">
+            <button class="btn" type="button" id="reloadSettingsBtn">从云端同步</button>
+            <button class="btn primary" type="button" id="saveSettingsBtn">保存到云端</button>
+          </div>
+        </div>
         <label class="switch-item">
           <span>Codex 额度</span>
           <input type="checkbox" data-component-toggle="quota">

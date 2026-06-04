@@ -79,6 +79,9 @@ const els = {
   endpointAccessKey: document.getElementById("endpointAccessKey"),
   addEndpointBtn: document.getElementById("addEndpointBtn"),
   endpointList: document.getElementById("endpointList"),
+  saveSettingsBtn: document.getElementById("saveSettingsBtn"),
+  reloadSettingsBtn: document.getElementById("reloadSettingsBtn"),
+  settingsSyncStatus: document.getElementById("settingsSyncStatus"),
 };
 
 let sessionToken = localStorage.getItem(SESSION_KEY) || "";
@@ -229,6 +232,7 @@ async function loadGlobalSettings() {
   const fallback = readLocalGlobalSettings();
   if (fallback && Object.keys(fallback).length > 0) {
     state.globalSettings = fallback;
+    updateSettingsSyncStatus("已加载本地设置，正在检查云端");
   }
 
   try {
@@ -245,8 +249,12 @@ async function loadGlobalSettings() {
     state.globalSettings = remoteHasSettings ? remoteSettings : { ...fallback, ...remoteSettings };
     state.settingsPersisted = Boolean(settings && settings.persisted);
     localStorage.setItem(GLOBAL_SETTINGS_FALLBACK_KEY, JSON.stringify(state.globalSettings));
+    updateSettingsSyncStatus(
+      state.settingsPersisted ? "已连接 KV 云端设置" : "未绑定 KV，仅本地保存",
+    );
   } catch (error) {
     log("warn", `全局设置读取失败，已使用本地设置: ${error.message || "unknown"}`);
+    updateSettingsSyncStatus("云端设置读取失败，当前使用本地设置");
   }
 }
 
@@ -295,13 +303,18 @@ function collectGlobalSettings() {
   };
 }
 
-async function saveGlobalSettings() {
+async function saveGlobalSettings(options = {}) {
   state.globalSettings = collectGlobalSettings();
   localStorage.setItem(GLOBAL_SETTINGS_FALLBACK_KEY, JSON.stringify(state.globalSettings));
 
-  if (loginRequired && !sessionToken) return;
+  if (loginRequired && !sessionToken) {
+    updateSettingsSyncStatus("请先登录管理员再保存到云端");
+    return;
+  }
 
   try {
+    setSettingsSyncBusy(true);
+    if (options.manual) updateSettingsSyncStatus("正在保存到云端...");
     const saved = await apiPost("/api/settings", state.globalSettings);
     state.settingsPersisted = Boolean(saved && saved.persisted);
     if (saved) {
@@ -314,9 +327,49 @@ async function saveGlobalSettings() {
     }
     if (!state.settingsPersisted) {
       log("warn", "全局设置未绑定 KV，当前只能保存在本地浏览器");
+      updateSettingsSyncStatus("未绑定 KV，仅保存到本地浏览器");
+    } else {
+      updateSettingsSyncStatus(`已保存到云端 ${new Date().toLocaleTimeString("zh-CN", { hour12: false })}`);
     }
   } catch (error) {
     log("warn", `全局设置保存失败: ${error.message || "unknown"}`);
+    updateSettingsSyncStatus(`保存失败: ${error.message || "unknown"}`);
+  } finally {
+    setSettingsSyncBusy(false);
+  }
+}
+
+async function reloadGlobalSettings() {
+  try {
+    setSettingsSyncBusy(true);
+    updateSettingsSyncStatus("正在从云端同步...");
+    const settings = await apiGet("/api/settings");
+    state.globalSettings = settings || {};
+    state.settingsPersisted = Boolean(settings && settings.persisted);
+    localStorage.setItem(GLOBAL_SETTINGS_FALLBACK_KEY, JSON.stringify(state.globalSettings));
+    applyComponentSettings();
+    restoreWindowState();
+    renderWindowDock();
+    renderEndpointList();
+    render();
+    updateSettingsSyncStatus(
+      state.settingsPersisted ? `已从云端同步 ${new Date().toLocaleTimeString("zh-CN", { hour12: false })}` : "未绑定 KV，仅使用本地设置",
+    );
+  } catch (error) {
+    log("warn", `全局设置同步失败: ${error.message || "unknown"}`);
+    updateSettingsSyncStatus(`同步失败: ${error.message || "unknown"}`);
+  } finally {
+    setSettingsSyncBusy(false);
+  }
+}
+
+function updateSettingsSyncStatus(message) {
+  if (els.settingsSyncStatus) els.settingsSyncStatus.textContent = message;
+}
+
+function setSettingsSyncBusy(busy) {
+  for (const button of [els.saveSettingsBtn, els.reloadSettingsBtn]) {
+    if (button) button.disabled = busy;
   }
 }
 
@@ -353,6 +406,8 @@ function initSettings() {
   els.settingsToggle?.addEventListener("click", () => withAdmin(() => setSettingsOpen(true)));
   els.settingsClose?.addEventListener("click", () => setSettingsOpen(false));
   els.settingsOverlay?.addEventListener("click", () => setSettingsOpen(false));
+  els.saveSettingsBtn?.addEventListener("click", () => withAdmin(() => saveGlobalSettings({ manual: true })));
+  els.reloadSettingsBtn?.addEventListener("click", () => withAdmin(reloadGlobalSettings));
 
   document.querySelectorAll("[data-component-toggle]").forEach((input) => {
     input.addEventListener("change", () => {
