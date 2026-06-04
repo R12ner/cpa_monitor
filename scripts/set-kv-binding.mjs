@@ -14,9 +14,19 @@ binding = "CPA_MONITOR_KV"
 id = "${id}"`;
 
 let next;
-if (/\[\[kv_namespaces\]\][\s\S]*?binding\s*=\s*"CPA_MONITOR_KV"[\s\S]*?(?=\n\[\[|\n[a-zA-Z_][\w-]*\s*=|$)/.test(original)) {
+const activeBindingPattern =
+  /\[\[kv_namespaces\]\][\s\S]*?binding\s*=\s*"CPA_MONITOR_KV"[\s\S]*?(?=\n\[\[|\n[a-zA-Z_][\w-]*\s*=|$)/;
+const commentedExamplePattern =
+  /#\s*\[\[kv_namespaces\]\]\s*\r?\n\s*#?\s*binding\s*=\s*"CPA_MONITOR_KV"\s*\r?\n\s*#?\s*id\s*=\s*"[^"]*"/;
+
+if (activeBindingPattern.test(original)) {
   next = original.replace(
-    /\[\[kv_namespaces\]\][\s\S]*?binding\s*=\s*"CPA_MONITOR_KV"[\s\S]*?(?=\n\[\[|\n[a-zA-Z_][\w-]*\s*=|$)/,
+    activeBindingPattern,
+    block,
+  );
+} else if (commentedExamplePattern.test(original)) {
+  next = original.replace(
+    commentedExamplePattern,
     block,
   );
 } else {

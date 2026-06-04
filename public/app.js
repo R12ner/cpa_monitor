@@ -233,7 +233,16 @@ async function loadGlobalSettings() {
 
   try {
     const settings = await apiGet("/api/settings");
-    state.globalSettings = settings || {};
+    const remoteSettings = settings || {};
+    const remoteHasSettings = hasStoredGlobalSettings(remoteSettings);
+    const fallbackHasSettings = hasStoredGlobalSettings(fallback);
+    if (remoteSettings.persisted && sessionToken && !remoteHasSettings && fallbackHasSettings) {
+      state.globalSettings = fallback;
+      await saveGlobalSettings();
+      return;
+    }
+
+    state.globalSettings = remoteHasSettings ? remoteSettings : { ...fallback, ...remoteSettings };
     state.settingsPersisted = Boolean(settings && settings.persisted);
     localStorage.setItem(GLOBAL_SETTINGS_FALLBACK_KEY, JSON.stringify(state.globalSettings));
   } catch (error) {
@@ -241,12 +250,41 @@ async function loadGlobalSettings() {
   }
 }
 
+function hasStoredGlobalSettings(settings) {
+  return Boolean(
+    settings &&
+      ((settings.components && Object.keys(settings.components).length > 0) ||
+        (settings.windows && Object.keys(settings.windows).length > 0) ||
+        (Array.isArray(settings.endpoints) && settings.endpoints.length > 0)),
+  );
+}
+
 function readLocalGlobalSettings() {
+  const settings = {};
   try {
-    return JSON.parse(localStorage.getItem(GLOBAL_SETTINGS_FALLBACK_KEY) || "{}");
+    Object.assign(settings, JSON.parse(localStorage.getItem(GLOBAL_SETTINGS_FALLBACK_KEY) || "{}"));
   } catch {
-    return {};
+    // Ignore invalid fallback settings.
   }
+  try {
+    if (!settings.components) settings.components = JSON.parse(localStorage.getItem(COMPONENT_KEY) || "null");
+  } catch {
+    // Ignore invalid legacy component settings.
+  }
+  try {
+    if (!settings.windows) settings.windows = JSON.parse(localStorage.getItem(WINDOW_KEY) || "null");
+  } catch {
+    // Ignore invalid legacy window settings.
+  }
+  try {
+    if (!settings.endpoints) settings.endpoints = JSON.parse(localStorage.getItem(ENDPOINT_KEY) || "null");
+  } catch {
+    // Ignore invalid legacy endpoint settings.
+  }
+  if (!settings.components) delete settings.components;
+  if (!settings.windows) delete settings.windows;
+  if (!settings.endpoints) delete settings.endpoints;
+  return settings;
 }
 
 function collectGlobalSettings() {

@@ -54,10 +54,12 @@ export async function onRequest(context) {
     if (route === "settings" && method === "GET") {
       const isAuthed = await hasValidSession(context.request, context.env);
       const settings = await readGlobalSettings(context.env);
+      const hasStore = Boolean(getSettingsStore(context.env));
       return ok(
         {
           ...sanitizeSettings(settings, { includePrivate: isAuthed }),
-          persisted: Boolean(getSettingsStore(context.env)),
+          persisted: hasStore,
+          storage: hasStore ? "kv" : "local-fallback",
         },
         requestId,
         startedAt,

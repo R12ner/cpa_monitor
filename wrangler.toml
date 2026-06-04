@@ -9,6 +9,6 @@ pages_build_output_dir = "public"
 # 然后提交 wrangler.toml 到 GitHub，Cloudflare 会在下一次部署时应用绑定。
 #
 # 最终会生成类似下面的配置：
-# [[kv_namespaces]]
+[[kv_namespaces]]
 binding = "CPA_MONITOR_KV"
 id = "aa9c01241a064e73b0c8598def17b73f"
