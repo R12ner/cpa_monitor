@@ -459,17 +459,19 @@ function minimizeWindow(panel) {
   panel.dataset.animating = "true";
   setWindowAnimationActive(true);
   panel.classList.remove("maximized", "maximizing", "unmaximizing", "restoring");
-  panel.classList.add("window-animating-panel");
   refreshMaximizedClass();
 
-  animatePanelToRect(panel, getDockTargetRect(), { opacityOut: true, duration: 320 }).finally(() => {
-    panel.classList.remove("window-animating-panel");
-    panel.hidden = true;
-    panel.dataset.minimized = "true";
+  const fromRect = panel.getBoundingClientRect();
+  const clone = createWindowAnimationClone(panel, fromRect);
+  panel.hidden = true;
+  panel.dataset.minimized = "true";
+  persistWindowState();
+  renderWindowDock();
+
+  animateRectElementTo(clone, fromRect, getDockTargetRect(), { opacityOut: true, duration: 320 }).finally(() => {
+    clone.remove();
     panel.dataset.animating = "false";
     setWindowAnimationActive(false);
-    persistWindowState();
-    renderWindowDock();
   }, 380);
 }
 
@@ -622,6 +624,43 @@ function animatePanelTransform(panel, fromRect, toRect, options) {
       animation.cancel();
       panel.style.transformOrigin = "";
     });
+}
+
+function createWindowAnimationClone(panel, rect) {
+  const clone = panel.cloneNode(true);
+  clone.removeAttribute("id");
+  clone.querySelectorAll("[id]").forEach((item) => item.removeAttribute("id"));
+  clone.setAttribute("aria-hidden", "true");
+  clone.classList.add("window-animating-panel", "window-animation-clone");
+  Object.assign(clone.style, {
+    position: "fixed",
+    left: `${rect.left}px`,
+    top: `${rect.top}px`,
+    width: `${rect.width}px`,
+    height: `${rect.height}px`,
+    margin: "0",
+    zIndex: "120",
+    pointerEvents: "none",
+  });
+  document.body.appendChild(clone);
+  return clone;
+}
+
+function animateRectElementTo(element, fromRect, toRect, options = {}) {
+  const outScaleX = fromRect.width ? toRect.width / fromRect.width : 1;
+  const outScaleY = fromRect.height ? toRect.height / fromRect.height : 1;
+  const target = `translate3d(${toRect.left - fromRect.left}px, ${toRect.top - fromRect.top}px, 0) scale(${outScaleX}, ${outScaleY})`;
+  const easing = "cubic-bezier(0.22, 1, 0.36, 1)";
+  const duration = options.duration || 320;
+  element.style.transformOrigin = "top left";
+  const animation = element.animate(
+    [
+      { transform: "translate3d(0, 0, 0) scale(1, 1)", opacity: 1 },
+      { transform: target, opacity: options.opacityOut ? 0.18 : 1 },
+    ],
+    { duration, easing, fill: "both" },
+  );
+  return animation.finished.catch(() => null).finally(() => animation.cancel());
 }
 
 function restoreWindowState() {

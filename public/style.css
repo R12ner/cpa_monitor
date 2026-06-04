@@ -863,6 +863,10 @@ body[data-theme="dark"].window-animating.has-maximized-window::after {
   display: none;
 }
 
+.window-panel[hidden] {
+  display: none !important;
+}
+
 .window-dock button {
   min-height: 34px;
   padding: 7px 12px;
@@ -1574,8 +1578,25 @@ td {
 @media (max-width: 1080px) {
   .layout {
     grid-template-columns: 1fr;
+    grid-auto-rows: max-content;
+    align-content: start;
+    width: 100%;
+    max-width: 100%;
+    min-height: auto;
     padding: 16px;
     padding-top: 72px;
+  }
+
+  .main,
+  .sidebar,
+  .panel,
+  .metric-grid {
+    min-width: 0;
+  }
+
+  .main,
+  .sidebar {
+    align-self: start;
   }
 
   .metric-grid {
@@ -1599,33 +1620,35 @@ td {
 
 @media (max-width: 640px) {
   body {
-    font-size: 12px;
-    line-height: 1.6;
+    font-size: 16px;
+    line-height: 1.55;
   }
 
   .control-center {
-    top: 10px;
-    right: 10px;
-    gap: 6px;
-    padding: 6px;
-    border-radius: 16px;
+    top: max(10px, env(safe-area-inset-top));
+    right: max(10px, env(safe-area-inset-right));
+    gap: 7px;
+    padding: 7px;
+    border-radius: 18px;
   }
 
   .control-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    font-size: 18px;
+    width: 44px;
+    height: 44px;
+    border-radius: 13px;
+    font-size: 21px;
   }
 
   .layout {
-    gap: 12px;
-    padding: 70px 10px 18px;
+    gap: 16px;
+    width: 100%;
+    max-width: 440px;
+    padding: calc(78px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));
   }
 
   .sidebar,
   .main {
-    gap: 12px;
+    gap: 16px;
   }
 
   .sidebar,
@@ -1636,13 +1659,13 @@ td {
 
   .panel,
   .metric-card {
-    border-radius: 12px;
+    border-radius: 18px;
     backdrop-filter: blur(16px);
   }
 
   .title-bar {
-    min-height: 42px;
-    padding: 10px 12px;
+    min-height: 50px;
+    padding: 13px 16px;
   }
 
   .title-bar .title {
@@ -1650,63 +1673,123 @@ td {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 11px;
+    font-size: 14px;
+    letter-spacing: 0.4px;
   }
 
   .panel-body {
-    padding: 14px;
+    padding: 20px;
   }
 
   .brand {
-    gap: 10px;
-    padding-bottom: 12px;
+    gap: 12px;
+    padding-bottom: 14px;
   }
 
   .brand-icon {
-    width: 42px;
-    height: 42px;
-    border-radius: 9px;
-    font-size: 12px;
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    font-size: 13px;
+  }
+
+  .brand-text h1 {
+    font-size: 18px;
+  }
+
+  .brand-text span,
+  .metric-card small,
+  .terminal-note,
+  .kv-list span {
+    font-size: 14px;
   }
 
   .nav-section {
-    margin-top: 10px;
+    margin-top: 12px;
+  }
+
+  .nav-label {
+    font-size: 13px;
+    letter-spacing: 1.4px;
+  }
+
+  .nav-item {
+    min-height: 50px;
+    padding: 13px 16px;
+    border-radius: 15px;
+    font-size: 16px;
   }
 
   .status-grid {
-    gap: 8px;
+    gap: 10px;
+  }
+
+  .status-box {
+    padding: 16px 12px;
+    border-radius: 15px;
+  }
+
+  .status-box .val {
+    font-size: 24px;
+  }
+
+  .status-box .label {
+    font-size: 13px;
   }
 
   .terminal-note {
-    margin-top: 12px;
+    margin-top: 14px;
     overflow-wrap: anywhere;
+  }
+
+  .kv-list {
+    gap: 12px;
+  }
+
+  .kv-list div {
+    padding-bottom: 10px;
+  }
+
+  .kv-list strong {
+    font-size: 14px;
   }
 
   .metric-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+    gap: 14px;
   }
 
   .metric-card {
-    padding: 12px;
+    min-height: 112px;
+    padding: 18px;
+  }
+
+  .metric-card span {
+    font-size: 14px;
   }
 
   .metric-card strong {
-    font-size: 22px;
+    margin-top: 6px;
+    font-size: 28px;
   }
 
   .hero-body {
     min-height: auto;
   }
 
+  .eyebrow {
+    font-size: 14px;
+    overflow-wrap: anywhere;
+  }
+
   .hero-body h2 {
-    font-size: 22px;
+    font-size: 30px;
     line-height: 1.2;
   }
 
   .hero-body p {
     max-width: none;
-    font-size: 12px;
+    font-size: 15px;
   }
 
   .quota-toolbar,
@@ -1717,7 +1800,13 @@ td {
   }
 
   .quota-toolbar strong {
-    font-size: 18px;
+    font-size: 24px;
+  }
+
+  .quota-toolbar span {
+    min-width: 32px;
+    height: 32px;
+    font-size: 14px;
   }
 
   .quota-actions,
@@ -1727,22 +1816,24 @@ td {
 
   .quota-actions {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 42px;
+    grid-template-columns: minmax(0, 1fr) 48px;
+    gap: 10px;
   }
 
   .quota-actions .icon-btn {
-    width: 42px;
+    width: 48px;
+    height: 48px;
   }
 
   .quota-grid {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 16px;
   }
 
   .quota-card {
     min-height: 0;
-    padding: 14px;
-    border-radius: 12px;
+    padding: 20px;
+    border-radius: 18px;
   }
 
   .quota-head {
@@ -1756,9 +1847,33 @@ td {
     overflow-wrap: anywhere;
   }
 
+  .quota-head strong {
+    font-size: 17px;
+  }
+
+  .provider-pill {
+    padding: 7px 12px;
+    font-size: 14px;
+  }
+
+  .quota-plan,
+  .quota-label span,
+  .cache-status,
+  .log-output {
+    font-size: 14px;
+  }
+
+  .quota-label strong {
+    font-size: 15px;
+  }
+
+  .quota-track {
+    height: 12px;
+  }
+
   .filters {
     grid-template-columns: 1fr;
-    gap: 10px;
+    gap: 13px;
   }
 
   .filters label,
@@ -1768,19 +1883,56 @@ td {
     width: 100%;
   }
 
+  .filters label {
+    font-size: 14px;
+  }
+
+  .filters input[type="search"],
+  .filters select,
+  .toggle-line,
+  .quota-toolbar select,
+  .pagination-controls select {
+    min-height: 46px;
+    border-radius: 15px;
+    font-size: 16px;
+  }
+
+  .filters input[type="search"],
+  .filters select,
+  .quota-toolbar select {
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
   .btn {
     width: 100%;
-    min-height: 40px;
+    min-height: 48px;
     justify-content: center;
+    border-radius: 15px;
+    font-size: 16px;
   }
 
   .pagination-controls {
     width: 100%;
     justify-content: space-between;
+    gap: 10px;
   }
 
   .pagination-controls label {
-    min-width: 92px;
+    min-width: 112px;
+    font-size: 14px;
+  }
+
+  .page-btn {
+    width: 42px;
+    height: 42px;
+    font-size: 22px;
+  }
+
+  #pageInfo,
+  #tableCount,
+  #lastChecked {
+    font-size: 14px;
   }
 
   .responsive-table {
@@ -1806,14 +1958,14 @@ td {
 
   tbody {
     display: grid;
-    gap: 10px;
+    gap: 12px;
   }
 
   tbody tr {
-    padding: 10px;
+    padding: 16px;
     background: rgba(27, 36, 51, 0.04);
     border: 1px solid rgba(27, 36, 51, 0.06);
-    border-radius: 12px;
+    border-radius: 18px;
   }
 
   body[data-theme="dark"] tbody tr {
@@ -1823,11 +1975,12 @@ td {
 
   td {
     display: grid;
-    grid-template-columns: 72px minmax(0, 1fr);
-    gap: 8px;
-    min-height: 30px;
-    padding: 7px 0;
+    grid-template-columns: 92px minmax(0, 1fr);
+    gap: 12px;
+    min-height: 38px;
+    padding: 10px 0;
     border-bottom: 1px solid rgba(27, 36, 51, 0.05);
+    font-size: 14px;
     overflow-wrap: anywhere;
   }
 
@@ -1842,9 +1995,9 @@ td {
 
   .mobile-row-summary {
     display: grid;
-    gap: 8px;
-    margin-bottom: 10px;
-    padding-bottom: 10px;
+    gap: 10px;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
     border-bottom: 1px solid rgba(27, 36, 51, 0.06);
   }
 
@@ -1859,14 +2012,14 @@ td {
 
   .mobile-row-head strong {
     color: var(--text);
-    font-size: 12px;
+    font-size: 16px;
     line-height: 1.35;
     overflow-wrap: anywhere;
   }
 
   .mobile-row-provider {
     color: var(--text-dim);
-    font-size: 10px;
+    font-size: 13px;
     text-transform: uppercase;
     letter-spacing: 0.6px;
   }
@@ -1881,13 +2034,13 @@ td {
   .mobile-chip {
     display: inline-flex;
     align-items: center;
-    min-height: 22px;
-    padding: 2px 8px;
+    min-height: 28px;
+    padding: 4px 10px;
     color: var(--text-dim);
     background: rgba(27, 36, 51, 0.06);
     border: 1px solid rgba(27, 36, 51, 0.07);
     border-radius: 999px;
-    font-size: 10px;
+    font-size: 13px;
     white-space: nowrap;
   }
 
@@ -1902,9 +2055,9 @@ td {
 
   td::before {
     color: var(--text-muted);
-    font-size: 10px;
+    font-size: 13px;
     font-weight: 700;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.2px;
   }
 
   td:nth-child(1)::before { content: "实例"; }
@@ -1932,17 +2085,22 @@ td {
     max-height: 260px;
   }
 
+  .log-line {
+    padding: 10px 12px;
+    border-radius: 12px;
+  }
+
   .settings-drawer {
     width: 100vw;
     max-width: none;
   }
 
   .settings-head {
-    padding: 20px 16px;
+    padding: 22px 18px;
   }
 
   .settings-group {
-    padding: 18px 16px;
+    padding: 20px 18px;
   }
 
   .login-card {
@@ -1958,12 +2116,12 @@ td {
   }
 
   .window-panel.maximized {
-    inset: 8px;
-    border-radius: 12px;
+    inset: 10px;
+    border-radius: 16px;
   }
 
   .window-panel.maximized .panel-body {
-    padding: 14px;
+    padding: 20px;
   }
 
   body.has-maximized-window::after {
@@ -1981,5 +2139,37 @@ td {
 
   .window-dock button {
     flex: 0 0 auto;
+    min-height: 42px;
+    padding-inline: 14px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 380px) {
+  body {
+    font-size: 15px;
+  }
+
+  .layout {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .panel-body,
+  .quota-card,
+  .metric-card {
+    padding: 17px;
+  }
+
+  .metric-grid {
+    gap: 10px;
+  }
+
+  .metric-card strong {
+    font-size: 25px;
+  }
+
+  td {
+    grid-template-columns: 84px minmax(0, 1fr);
   }
 }
