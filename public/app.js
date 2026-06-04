@@ -2,6 +2,7 @@ const CACHE_KEY = "cpa-monitor:snapshot:v2";
 const FILTER_KEY = "cpa-monitor:filters:v2";
 const WINDOW_KEY = "cpa-monitor:windows:v1";
 const THEME_KEY = "cpa-monitor:theme:v1";
+const PRIVACY_KEY = "cpa-monitor:privacy:v1";
 const SESSION_KEY = "cpa-monitor:session:v1";
 const COMPONENT_KEY = "cpa-monitor:components:v1";
 const ENDPOINT_KEY = "cpa-monitor:endpoints:v1";
@@ -23,6 +24,7 @@ const state = {
   summary: emptySummary(),
   lastCheckedAt: null,
   loadedFromCache: false,
+  privacyMode: false,
   globalSettings: {},
   settingsPersisted: false,
 };
@@ -65,6 +67,7 @@ const els = {
   checkBtn: document.getElementById("checkBtn"),
   windowDock: document.getElementById("windowDock"),
   themeToggle: document.getElementById("themeToggle"),
+  privacyToggle: document.getElementById("privacyToggle"),
   settingsToggle: document.getElementById("settingsToggle"),
   settingsOverlay: document.getElementById("settingsOverlay"),
   settingsDrawer: document.getElementById("settingsDrawer"),
@@ -112,6 +115,7 @@ async function boot() {
 
 function bindEvents() {
   initTheme();
+  initPrivacyMode();
   initWindowManager();
   initResponsiveWindows();
   initSettings();
@@ -175,6 +179,28 @@ function setTheme(theme) {
   } else if (els.themeToggle) {
     els.themeToggle.dataset.icon = nextTheme === "dark" ? "sun" : "moon";
   }
+}
+
+function initPrivacyMode() {
+  setPrivacyMode(localStorage.getItem(PRIVACY_KEY) === "true", { renderNow: false });
+  els.privacyToggle?.addEventListener("change", () => {
+    setPrivacyMode(Boolean(els.privacyToggle.checked));
+  });
+}
+
+function setPrivacyMode(enabled, options = {}) {
+  state.privacyMode = Boolean(enabled);
+  localStorage.setItem(PRIVACY_KEY, state.privacyMode ? "true" : "false");
+  document.body.classList.toggle("privacy-mode", state.privacyMode);
+  if (els.privacyToggle) {
+    els.privacyToggle.checked = state.privacyMode;
+    els.privacyToggle.classList.toggle("active", state.privacyMode);
+    els.privacyToggle.title = state.privacyMode ? "关闭隐私模式" : "隐私模式";
+    els.privacyToggle.setAttribute("aria-label", state.privacyMode ? "关闭隐私模式" : "隐私模式");
+    const icon = els.privacyToggle.querySelector("i");
+    if (icon) icon.className = state.privacyMode ? "ph-bold ph-eye" : "ph-bold ph-eye-slash";
+  }
+  if (options.renderNow !== false) render();
 }
 
 function initLogin() {
@@ -1167,12 +1193,15 @@ function renderQuotaCards(rows) {
   els.quotaGrid.innerHTML = visible
     .map((row) => {
       const bars = row.check.quotaBars || [];
+      const fileName = displayFileName(row.file.id, 58);
+      const accountName = displayAccountName(row.file.chatgptAccountId || "-", 42);
+      const fileTitle = state.privacyMode ? "Hidden by privacy mode" : escapeHtml(row.file.id);
       return `<article class="quota-card">
         <div class="quota-head">
           <span class="provider-pill">${escapeHtml(targetLabel())}</span>
-          <strong title="${escapeHtml(row.file.id)}">${escapeHtml(shorten(row.file.id, 58))}</strong>
+          <strong title="${fileTitle}">${escapeHtml(fileName)}</strong>
         </div>
-        <div class="quota-plan">账号 ${escapeHtml(shorten(row.file.chatgptAccountId || "-", 42))}</div>
+        <div class="quota-plan">账号 ${escapeHtml(accountName)}</div>
         ${bars.map(renderQuotaBar).join("")}
       </article>`;
     })
@@ -1216,13 +1245,17 @@ function renderTable(rows) {
       const check = row.check;
       const status = check ? check.status : "unchecked";
       const mobileSummary = renderMobileRowSummary(row, status);
+      const fileName = displayFileName(file.id, 26);
+      const accountName = displayAccountName(file.chatgptAccountId || "-", 24);
+      const fileTitle = state.privacyMode ? "Hidden by privacy mode" : escapeHtml(file.id);
+      const accountTitle = state.privacyMode ? "Hidden by privacy mode" : escapeHtml(file.chatgptAccountId);
       return `<tr>
         <td class="mono-strong" data-cell="instance">${mobileSummary}${escapeHtml(row.instance.name)}</td>
-        <td data-cell="file" title="${escapeHtml(file.id)}">${escapeHtml(shorten(file.id, 26))}</td>
+        <td data-cell="file" title="${fileTitle}">${escapeHtml(fileName)}</td>
         <td data-cell="provider">${escapeHtml(file.provider)}</td>
         <td data-cell="auth-index">${escapeHtml(String(file.authIndex))}</td>
         <td data-cell="disabled">${file.disabled ? '<span class="tag warn">true</span>' : '<span class="tag neutral">false</span>'}</td>
-        <td data-cell="account" title="${escapeHtml(file.chatgptAccountId)}">${escapeHtml(shorten(file.chatgptAccountId || "-", 24))}</td>
+        <td data-cell="account" title="${accountTitle}">${escapeHtml(accountName)}</td>
         <td data-cell="status">${statusTag(status)}</td>
         <td data-cell="http">${check && check.statusCode ? check.statusCode : "-"}</td>
         <td data-cell="latency">${check ? `${check.latencyMs}ms` : "-"}</td>
@@ -1236,9 +1269,10 @@ function renderMobileRowSummary(row, status) {
   if (row.instanceError || !row.file) return "";
   const http = row.check && row.check.statusCode ? row.check.statusCode : "-";
   const latency = row.check ? `${row.check.latencyMs}ms` : "-";
+  const fileName = displayFileName(row.file.id, 28);
   return `<div class="mobile-row-summary" aria-hidden="true">
     <div class="mobile-row-head">
-      <strong>${escapeHtml(shorten(row.file.id, 28))}</strong>
+      <strong>${escapeHtml(fileName)}</strong>
       <span class="mobile-row-provider">${escapeHtml(row.file.provider || "-")}</span>
     </div>
     <div class="mobile-row-meta">
@@ -1488,6 +1522,37 @@ function formatShortDate(value) {
 function shorten(value, max) {
   const text = String(value || "");
   return text.length > max ? `${text.slice(0, max - 3)}...` : text;
+}
+
+function displayFileName(value, max) {
+  const text = String(value || "-");
+  if (!state.privacyMode) return shorten(text, max);
+  return shorten(maskJsonName(text), max);
+}
+
+function displayAccountName(value, max) {
+  const text = String(value || "-");
+  if (!state.privacyMode || text === "-") return shorten(text, max);
+  const tail = text.length > 6 ? text.slice(-6) : "";
+  return shorten(`acct_••••••${tail ? `_${tail}` : ""}`, max);
+}
+
+function maskJsonName(value) {
+  const text = String(value || "-");
+  const match = text.match(/^(.*?)(\.json)$/i);
+  if (match) return `${maskNamePrefix(match[1])}${match[2]}`;
+  const slashIndex = Math.max(text.lastIndexOf("/"), text.lastIndexOf("\\"));
+  if (slashIndex >= 0) {
+    return `${text.slice(0, slashIndex + 1)}${maskNamePrefix(text.slice(slashIndex + 1))}`;
+  }
+  return maskNamePrefix(text);
+}
+
+function maskNamePrefix(value) {
+  const text = String(value || "");
+  if (!text) return "••••••";
+  const suffix = text.length > 6 ? text.slice(-4) : "";
+  return `••••••${suffix ? `_${suffix}` : ""}`;
 }
 
 function escapeHtml(value) {
